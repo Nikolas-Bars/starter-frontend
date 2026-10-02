@@ -2,10 +2,40 @@ import { readonly, ref, shallowRef } from 'vue'
 
 import type { SignalPayload, SignalType } from '@/types/call'
 
+export type MediaAccessReason = 'denied' | 'not-found' | 'busy' | 'unsupported' | 'unknown'
+
+const MEDIA_ACCESS_MESSAGES: Record<MediaAccessReason, string> = {
+  denied:
+    'Доступ к камере и микрофону запрещён. Разрешите его для сайта в браузере. На iPhone и iPad ' +
+    'проверьте ещё «Настройки» → ваш браузер → «Камера» и «Микрофон».',
+  'not-found': 'Не нашли камеру и микрофон. Проверьте, что они подключены.',
+  busy: 'Камера или микрофон заняты другим приложением. Закройте его и попробуйте снова.',
+  unsupported: 'Этот браузер не умеет звонить. Обновите его или откройте сайт в Chrome или Safari.',
+  unknown: 'Не удалось включить камеру и микрофон. Попробуйте ещё раз или перезапустите браузер.',
+}
+
 export class MediaAccessError extends Error {
-  constructor() {
-    super('Нет доступа к камере и микрофону. Разрешите их в настройках браузера.')
+  constructor(readonly reason: MediaAccessReason = 'unknown') {
+    super(MEDIA_ACCESS_MESSAGES[reason])
     this.name = 'MediaAccessError'
+  }
+}
+
+function mediaAccessReason(error: unknown): MediaAccessReason {
+  const name = error instanceof DOMException || error instanceof Error ? error.name : ''
+
+  switch (name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'denied'
+    case 'NotFoundError':
+    case 'OverconstrainedError':
+      return 'not-found'
+    case 'NotReadableError':
+    case 'AbortError':
+      return 'busy'
+    default:
+      return 'unknown'
   }
 }
 
@@ -42,17 +72,23 @@ export function usePeerConnection() {
 
     const devices = navigator.mediaDevices
     if (!devices?.getUserMedia) {
-      throw new MediaAccessError()
+      throw new MediaAccessError('unsupported')
     }
 
     let stream: MediaStream
     try {
       stream = await devices.getUserMedia({ video: true, audio: true })
-    } catch {
+    } catch (videoError) {
+      const reason = mediaAccessReason(videoError)
+      // Без разрешения на камеру не будет и разрешения на микрофон — второй запрос бессмыслен
+      if (reason === 'denied') {
+        throw new MediaAccessError(reason)
+      }
+
       try {
         stream = await devices.getUserMedia({ audio: true })
-      } catch {
-        throw new MediaAccessError()
+      } catch (audioError) {
+        throw new MediaAccessError(mediaAccessReason(audioError))
       }
     }
 
