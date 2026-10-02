@@ -105,7 +105,10 @@ onMounted(() => void load(1))
           {{ isOutgoing(call) ? '↗' : '↙' }}
         </span>
         <div class="history__info">
-          <span class="history__name">{{ counterpart(call).name }}</span>
+          <span class="history__name">
+            {{ counterpart(call).name }}
+            <span v-if="counterpart(call).is_guest" class="history__guest">гость</span>
+          </span>
           <span class="history__meta">
             <span class="visually-hidden">{{ isOutgoing(call) ? 'Исходящий' : 'Входящий' }},</span>
             {{ summary(call) }} · {{ formatDateTime(call.started_at) }}
@@ -184,6 +187,17 @@ onMounted(() => void load(1))
   overflow-wrap: anywhere;
   font-weight: 600;
   line-height: 1.3;
+}
+
+.history__guest {
+  margin-left: 0.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  vertical-align: 0.0625rem;
 }
 
 .history__meta {

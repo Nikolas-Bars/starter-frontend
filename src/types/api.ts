@@ -15,6 +15,24 @@ export interface User {
   email: string
   email_verified_at: string | null
   created_at: string | null
+  /** Гость по ссылке для звонка: email у него технический, показывать его не нужно */
+  is_guest: boolean
+}
+
+/** GET /api/call-link: своя ссылка; адрес — {origin}/c/{code} */
+export interface CallLink {
+  code: string
+  updated_at: string | null
+}
+
+/** GET /api/call-links/{code}: чужая ссылка — кому позвонит гость */
+export interface CallLinkInvite {
+  code: string
+  owner: { id: number; name: string }
+}
+
+export interface JoinCallLinkPayload {
+  name: string
 }
 
 /** Страница списка: GET /api/users, GET /api/calls */

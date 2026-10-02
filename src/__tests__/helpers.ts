@@ -24,6 +24,7 @@ export const authTokenResponse = {
       email: 'admin@example.com',
       email_verified_at: null,
       created_at: null,
+      is_guest: false,
     },
   },
 }

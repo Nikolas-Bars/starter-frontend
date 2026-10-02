@@ -8,6 +8,11 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     /** Только для гостей: вошедшего пользователя уводим на главную */
     guestOnly?: boolean
+    /**
+     * Сюда пускаем гостя по ссылке для звонка. С любой другой страницы его вход
+     * сбрасывается: он нужен только для одного звонка
+     */
+    allowLinkGuest?: boolean
   }
 }
 
@@ -39,6 +44,12 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
+      path: '/c/:code',
+      name: 'call-link',
+      component: () => import('@/views/CallLinkView.vue'),
+      meta: { allowLinkGuest: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
@@ -49,6 +60,10 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
   await auth.fetchUser().catch(() => undefined)
+
+  if (auth.isGuest && !to.meta.allowLinkGuest) {
+    await auth.logout()
+  }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: to.fullPath === '/' ? {} : { redirect: to.fullPath } }

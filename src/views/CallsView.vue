@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import CallHistory from '@/components/call/CallHistory.vue'
+import CallLinkCard from '@/components/call/CallLinkCard.vue'
 import UserList from '@/components/call/UserList.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
@@ -105,6 +106,8 @@ const connection = computed(() => {
         Скрыть
       </button>
     </div>
+
+    <CallLinkCard />
 
     <div class="calls__columns">
       <UserList />
