@@ -45,4 +45,10 @@ defineProps<{ title: string; subtitle?: string }>()
   font-size: 0.875rem;
   color: var(--color-text-muted);
 }
+
+@media (max-width: 40rem) {
+  .card {
+    padding: 1.5rem 1.25rem;
+  }
+}
 </style>

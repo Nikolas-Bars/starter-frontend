@@ -68,6 +68,6 @@ const id = useId()
 .field__error {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 </style>

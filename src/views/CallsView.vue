@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 
 import CallHistory from '@/components/call/CallHistory.vue'
 import UserList from '@/components/call/UserList.vue'
+import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useNotificationPermission } from '@/composables/useCallAttention'
 import { useCallStore } from '@/stores/call'
@@ -69,7 +70,10 @@ const connection = computed(() => {
           {{ connection.text }}
         </p>
       </div>
-      <RouterLink :to="{ name: 'welcome' }">На главную</RouterLink>
+      <RouterLink class="calls__back" :to="{ name: 'welcome' }">
+        <BaseIcon name="arrow-left" />
+        На главную
+      </RouterLink>
     </header>
 
     <div class="calls__settings">
@@ -134,6 +138,21 @@ const connection = computed(() => {
   font-size: 1.5rem;
 }
 
+.calls__back {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding-top: 0.25rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.calls__back:hover {
+  text-decoration: underline;
+}
+
 .calls__status {
   display: flex;
   align-items: center;
@@ -167,15 +186,17 @@ const connection = computed(() => {
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+  accent-color: var(--color-primary);
 }
 
 .calls__link {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-primary);
+  color: var(--color-accent-text);
   font: inherit;
   font-weight: 500;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -195,7 +216,7 @@ const connection = computed(() => {
   padding: 0.75rem 1rem;
   border-radius: var(--radius);
   background: var(--color-danger-soft);
-  color: var(--color-danger);
+  color: var(--color-danger-text);
   font-weight: 600;
 }
 
@@ -220,8 +241,28 @@ const connection = computed(() => {
 
 .calls__columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: 2rem;
   align-items: start;
+}
+
+@media (max-width: 40rem) {
+  .calls {
+    gap: 1.25rem;
+    padding: 1.25rem 1rem;
+  }
+
+  .calls__title {
+    font-size: 1.375rem;
+  }
+
+  .calls__settings {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .calls__missed {
+    justify-content: space-between;
+  }
 }
 </style>

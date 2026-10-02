@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import BaseIcon, { type IconName } from '@/components/ui/BaseIcon.vue'
+
 withDefaults(
   defineProps<{
     type?: 'button' | 'submit'
     variant?: 'primary' | 'ghost' | 'danger' | 'success'
+    icon?: IconName
     loading?: boolean
     disabled?: boolean
   }>(),
-  { type: 'button', variant: 'primary', loading: false, disabled: false },
+  { type: 'button', variant: 'primary', icon: undefined, loading: false, disabled: false },
 )
 </script>
 
@@ -19,6 +22,7 @@ withDefaults(
     :aria-busy="loading"
   >
     <span v-if="loading" class="button__spinner" aria-hidden="true" />
+    <BaseIcon v-else-if="icon" :name="icon" />
     <slot />
   </button>
 </template>
@@ -52,7 +56,7 @@ withDefaults(
 
 .button--primary {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .button--primary:hover:not(:disabled) {
