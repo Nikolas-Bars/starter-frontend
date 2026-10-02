@@ -12,9 +12,10 @@ export type ValidationErrors = Record<string, string[]>
 export interface User {
   id: number
   name: string
-  /** Ник без @, по нему (и по email) пользователя находят в поиске */
+  /** Ник без @, по нему (и по email целиком) пользователя находят в поиске */
   username: string | null
-  email: string
+  /** Только у текущего пользователя (вход, профиль), у остальных null */
+  email: string | null
   email_verified_at: string | null
   created_at: string | null
   /** Гость по ссылке для звонка: email у него технический, показывать его не нужно */
