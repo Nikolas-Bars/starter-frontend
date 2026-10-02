@@ -13,6 +13,8 @@ declare module 'vue-router' {
      * сбрасывается: он нужен только для одного звонка
      */
     allowLinkGuest?: boolean
+    /** Страница занимает всю высоту окна (мессенджер), а не карточку по центру */
+    fill?: boolean
   }
 }
 
@@ -21,8 +23,20 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'welcome',
-      component: () => import('@/views/WelcomeView.vue'),
+      name: 'chats',
+      component: () => import('@/views/ChatsView.vue'),
+      meta: { requiresAuth: true, fill: true },
+    },
+    {
+      path: '/chats/:id(\\d+)',
+      name: 'chat',
+      component: () => import('@/views/ChatsView.vue'),
+      meta: { requiresAuth: true, fill: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/ProfileView.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -70,7 +84,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guestOnly && auth.isAuthenticated) {
-    return { name: 'welcome' }
+    return { name: 'chats' }
   }
 
   return true

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import CallWindow from '@/components/call/CallWindow.vue'
 import IncomingCallModal from '@/components/call/IncomingCallModal.vue'
@@ -8,19 +9,30 @@ import { useCallAttention } from '@/composables/useCallAttention'
 import { useCallSounds } from '@/composables/useCallSounds'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
+import { useChatStore } from '@/stores/chat'
+import { useChatFoldersStore } from '@/stores/chatFolders'
 
 const auth = useAuthStore()
 const callStore = useCallStore()
+// Стор чатов создаём сразу: события по сокету приходят на любой странице
+const chatStore = useChatStore()
+const folderStore = useChatFoldersStore()
+const route = useRoute()
+
+/** Мессенджер занимает всё окно; переключатель темы у него в профиле */
+const fill = computed(() => route.meta.fill === true)
 
 useCallSounds()
 useCallAttention()
 
-// Входящие звонки принимаем на любой странице, пока пользователь авторизован
+// Входящие звонки и сообщения принимаем на любой странице, пока пользователь авторизован
 watch(
   () => auth.token,
   (token) => {
     if (token === null) {
       callStore.disconnect()
+      chatStore.reset()
+      folderStore.reset()
     } else {
       callStore.connect(token)
     }
@@ -30,8 +42,8 @@ watch(
 </script>
 
 <template>
-  <div class="app">
-    <header class="app__bar">
+  <div class="app" :class="{ 'app--fill': fill }">
+    <header v-if="!fill" class="app__bar">
       <ThemeToggle />
     </header>
     <main class="layout">
@@ -51,6 +63,12 @@ watch(
   padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+.app--fill {
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+}
+
 .app__bar {
   display: flex;
   justify-content: flex-end;
@@ -65,6 +83,11 @@ watch(
   padding: 1.5rem;
 }
 
+.app--fill .layout {
+  align-items: stretch;
+  min-height: 0;
+}
+
 @media (max-width: 40rem) {
   .app__bar {
     padding-inline: 0.75rem;
@@ -73,6 +96,11 @@ watch(
   .layout {
     align-items: flex-start;
     padding: 0.75rem 0.75rem 1.5rem;
+  }
+
+  .app--fill .layout {
+    align-items: stretch;
+    padding: 0;
   }
 }
 </style>

@@ -30,6 +30,30 @@ oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
   (ringtone/ringback/hang-up beeps synthesized by `CallSounds`, `src/realtime/callSounds.ts`) and
   `useCallAttention()` (blinking tab title, missed-call badge, system notification in background).
   User preferences (silent ringtone, chosen devices) are persisted by `useCallSettingsStore`.
+- Messenger: the home route `/` (and `/chats/:id`) is `ChatsView` — `ChatSidebar` (chat list +
+  user search by name/email/`@username`) and `ChatThread`. `useChatStore` owns chats and threads;
+  it reuses the call socket via `callStore.onServerMessage()` (`chat.message`, `chat.read`, reload
+  on `ready`). Sends are optimistic: a pending message (`id: 0`, `pending`) keyed by a UUID
+  `client_id` that the backend dedupes, so retries are safe. Read state is a per-member cursor
+  (`last_read_message_id`); the thread marks read when opened, on interaction, or on a new message
+  while the window is visible and focused. Guests have no chats. Full-height pages set
+  `meta.fill`.
+- Reactions: one per user per message from the fixed `REACTIONS` set (mirrors the backend
+  `ChatReactionEnum`). `chatStore.react()` toggles optimistically and rolls back on error; while a
+  request for a message is in flight, `chat.reaction` events for it are ignored so a stale echo
+  can't undo the newer choice.
+- Folders (`useChatFoldersStore`) are private to the user: tabs above the list, the folder menu
+  in the thread header, the manager `<dialog>` (`managerOpen`). A folder tab pages through
+  `GET chats?folder_id=` into the shared `chatStore.chats`; the unread badge is counted locally
+  once all of the folder's chats are known, otherwise the server's `unread_chats_count` is used.
+  `chat.folders` (from the user's other tabs) triggers a reload.
+- Call messages (`type: 'call'`, `call {status, duration_seconds}`) are written by the backend when a
+  call ends; `utils/chatCall.ts` labels them from the reader's side (the author is the caller), and
+  clicking one calls back. Typing: the composer calls `chatStore.notifyTyping()` (sent over the call
+  socket at most every `TYPING_NOTIFY_INTERVAL_MS`); incoming `chat.typing` shows «печатает…» in the
+  header and the list for `TYPING_VISIBLE_MS` or until that user's message arrives.
+- In Docker on macOS Vite sometimes misses a file change even with polling; if the served code
+  is stale, `docker compose restart web`.
 - Styling via CSS variables from `src/assets/main.css`; no hard-coded colors in components.
   Every theme-dependent token is a `light-dark(light, dark)` pair: the system scheme applies by
   default, `useThemeStore` pins it via `data-theme` on `<html>` (an inline script in `index.html`
@@ -44,5 +68,6 @@ oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
 ```bash
 make start        # docker build + up on http://localhost:5190
 make check        # lint + type-check + test
+npm run format    # Prettier; CI runs `prettier --check src/`, and `make check` does not
 npm run dev       # without Docker
 ```

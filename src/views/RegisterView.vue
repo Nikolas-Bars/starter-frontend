@@ -9,7 +9,7 @@ const router = useRouter()
 
 <template>
   <BaseCard title="Регистрация" subtitle="Создайте аккаунт за минуту">
-    <RegisterForm @success="router.replace({ name: 'welcome' })" />
+    <RegisterForm @success="router.replace({ name: 'chats' })" />
     <template #footer>
       Уже есть аккаунт? <RouterLink :to="{ name: 'login' }">Войти</RouterLink>
     </template>

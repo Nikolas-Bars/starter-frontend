@@ -64,6 +64,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** Профиль изменили на сервере — показываем новые имя и ник */
+  function setUser(updated: User): void {
+    user.value = updated
+  }
+
   async function logout(): Promise<void> {
     try {
       await authApi.logout()
@@ -83,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     joinAsGuest,
     fetchUser,
+    setUser,
     logout,
   }
 })
