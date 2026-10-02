@@ -84,7 +84,8 @@ function onScroll(): void {
   if (element === null) {
     return
   }
-  atBottom.value = element.scrollHeight - element.scrollTop - element.clientHeight < STICK_TO_BOTTOM_PX
+  atBottom.value =
+    element.scrollHeight - element.scrollTop - element.clientHeight < STICK_TO_BOTTOM_PX
   if (element.scrollTop < LOAD_OLDER_PX) {
     void loadOlder()
   }

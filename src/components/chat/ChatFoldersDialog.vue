@@ -20,7 +20,9 @@ watch(
   (open) => {
     if (open) {
       error.value = ''
-      drafts.value = Object.fromEntries(folderStore.folders.map((folder) => [folder.id, folder.name]))
+      drafts.value = Object.fromEntries(
+        folderStore.folders.map((folder) => [folder.id, folder.name]),
+      )
       dialog.value?.showModal()
     } else {
       dialog.value?.close()

@@ -1,10 +1,4 @@
-import type {
-  Call,
-  CallStatus,
-  ChatMessage,
-  ChatReactionState,
-  ChatReadState,
-} from '@/types/api'
+import type { Call, CallStatus, ChatMessage, ChatReactionState, ChatReadState } from '@/types/api'
 
 /**
  * Протокол сигнализации с WebSocket-сервером бэкенда (app/Modules/Call/WebSockets/MessageRouter.php).

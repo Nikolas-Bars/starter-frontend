@@ -44,7 +44,13 @@ async function logout(): Promise<void> {
 <template>
   <BaseCard title="Профиль" :subtitle="auth.user?.email">
     <form class="profile" novalidate @submit.prevent="save">
-      <BaseInput v-model="name" label="Имя" autocomplete="name" :error="fieldError('name')" required />
+      <BaseInput
+        v-model="name"
+        label="Имя"
+        autocomplete="name"
+        :error="fieldError('name')"
+        required
+      />
       <div class="profile__field">
         <BaseInput
           v-model="username"

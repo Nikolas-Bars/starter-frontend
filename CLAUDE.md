@@ -68,5 +68,6 @@ oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
 ```bash
 make start        # docker build + up on http://localhost:5190
 make check        # lint + type-check + test
+npm run format    # Prettier; CI runs `prettier --check src/`, and `make check` does not
 npm run dev       # without Docker
 ```

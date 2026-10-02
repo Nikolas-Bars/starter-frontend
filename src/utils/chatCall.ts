@@ -25,5 +25,7 @@ export function callTitle(call: ChatMessageCall, outgoing: boolean): string {
 /** Одной строкой для превью в списке чатов: «Исходящий звонок, 1:05» */
 export function callSummary(call: ChatMessageCall, outgoing: boolean): string {
   const title = callTitle(call, outgoing)
-  return call.duration_seconds === null ? title : `${title}, ${formatDuration(call.duration_seconds)}`
+  return call.duration_seconds === null
+    ? title
+    : `${title}, ${formatDuration(call.duration_seconds)}`
 }

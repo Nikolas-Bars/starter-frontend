@@ -24,8 +24,7 @@ const name = computed(() => props.chat.peer?.name ?? 'Удалённый пол�
 const lastMessage = computed(() => props.chat.last_message)
 const mine = computed(() => lastMessage.value?.user_id === auth.user?.id)
 const read = computed(
-  () =>
-    lastMessage.value !== null && props.chat.peer_last_read_message_id >= lastMessage.value.id,
+  () => lastMessage.value !== null && props.chat.peer_last_read_message_id >= lastMessage.value.id,
 )
 const online = computed(() =>
   props.chat.peer === null ? false : callStore.isUserOnline(props.chat.peer.id),
@@ -63,7 +62,10 @@ const lastCall = computed(() => {
       <span class="item__bottom">
         <span
           class="item__preview"
-          :class="{ 'item__preview--accent': typing, 'item__preview--missed': lastCall?.missed && !typing }"
+          :class="{
+            'item__preview--accent': typing,
+            'item__preview--missed': lastCall?.missed && !typing,
+          }"
         >
           <template v-if="typing">печатает…</template>
           <template v-else-if="lastCall">

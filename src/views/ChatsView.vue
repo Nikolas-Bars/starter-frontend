@@ -40,7 +40,12 @@ onMounted(() => {
           Скрыть
         </button>
       </div>
-      <ChatThread v-if="chatId !== null" :key="chatId" class="messenger__thread" :chat-id="chatId" />
+      <ChatThread
+        v-if="chatId !== null"
+        :key="chatId"
+        class="messenger__thread"
+        :chat-id="chatId"
+      />
       <div v-else class="messenger__placeholder">
         <BaseIcon name="chat" class="messenger__placeholder-icon" />
         <p>Выберите чат или найдите собеседника по имени, email или нику</p>

@@ -111,7 +111,9 @@ onBeforeUnmount(() => (pickerOpen.value = false))
           <span class="call-note__icon"><BaseIcon :name="callNote.icon" /></span>
           <span class="call-note__text">
             <span class="call-note__title">{{ callNote.title }}</span>
-            <span v-if="callNote.duration" class="call-note__duration">{{ callNote.duration }}</span>
+            <span v-if="callNote.duration" class="call-note__duration">{{
+              callNote.duration
+            }}</span>
           </span>
         </button>
         <p v-else class="bubble__body">{{ message.body }}</p>
