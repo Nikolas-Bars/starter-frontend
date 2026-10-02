@@ -19,7 +19,13 @@ const callStore = useCallStore()
         <h2 id="incoming-call-title" class="incoming__title">Входящий видеозвонок</h2>
         <p id="incoming-call-caller" class="incoming__caller">
           {{ callStore.counterpart?.name }}
-          <span class="incoming__email">{{ callStore.counterpart?.email }}</span>
+          <span class="incoming__email">
+            {{
+              callStore.counterpart?.is_guest
+                ? 'Гость по вашей ссылке'
+                : callStore.counterpart?.email
+            }}
+          </span>
         </p>
         <div class="incoming__actions">
           <BaseButton variant="danger" icon="phone-off" @click="callStore.reject()">

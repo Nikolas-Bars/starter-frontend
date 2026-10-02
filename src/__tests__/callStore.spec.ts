@@ -153,6 +153,7 @@ const me: User = {
   email: 'ivan@example.com',
   email_verified_at: null,
   created_at: null,
+  is_guest: false,
 }
 const bob: User = { ...me, id: 2, name: 'Мария', email: 'maria@example.com' }
 

@@ -2,15 +2,21 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { authApi } from '@/api/auth'
+import { callLinksApi } from '@/api/callLinks'
 import { ApiError } from '@/api/http'
 import { tokenStorage } from '@/api/tokenStorage'
 import type { AuthToken, LoginPayload, RegisterPayload, User } from '@/types/api'
 
+/** По какой ссылке вошёл гость: на чужой ссылке его вход не годится */
+const GUEST_LINK_KEY = 'guest_link_code'
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const token = ref<string | null>(tokenStorage.get())
+  const guestLinkCode = ref<string | null>(localStorage.getItem(GUEST_LINK_KEY))
 
   const isAuthenticated = computed(() => token.value !== null)
+  const isGuest = computed(() => user.value?.is_guest === true)
 
   function applyToken(auth: AuthToken): void {
     tokenStorage.set(auth.access_token)
@@ -20,8 +26,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   function reset(): void {
     tokenStorage.clear()
+    localStorage.removeItem(GUEST_LINK_KEY)
     token.value = null
     user.value = null
+    guestLinkCode.value = null
   }
 
   async function login(payload: LoginPayload): Promise<void> {
@@ -30,6 +38,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function register(payload: RegisterPayload): Promise<void> {
     applyToken(await authApi.register(payload))
+  }
+
+  /** Вход гостем по ссылке для звонка: позвонить можно только её владельцу */
+  async function joinAsGuest(code: string, name: string): Promise<void> {
+    applyToken(await callLinksApi.join(code, { name }))
+    localStorage.setItem(GUEST_LINK_KEY, code)
+    guestLinkCode.value = code
   }
 
   /** Загружает пользователя по сохранённому токену; протухший токен сбрасывается. */
@@ -58,5 +73,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, token, isAuthenticated, login, register, fetchUser, logout }
+  return {
+    user,
+    token,
+    guestLinkCode,
+    isAuthenticated,
+    isGuest,
+    login,
+    register,
+    joinAsGuest,
+    fetchUser,
+    logout,
+  }
 })

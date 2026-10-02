@@ -58,6 +58,26 @@ describe('auth store', () => {
     expect(localStorage.getItem('access_token')).toBeNull()
   })
 
+  it('входит гостем по ссылке и забывает её при выходе', async () => {
+    const fetchMock = mockFetchOnce(201, {
+      ...authTokenResponse,
+      data: { ...authTokenResponse.data, user: { ...authTokenResponse.data.user, is_guest: true } },
+    })
+    const auth = useAuthStore()
+
+    await auth.joinAsGuest('aB3dE5fG7hJ9', 'Аркадий')
+
+    expect(auth.isGuest).toBe(true)
+    expect(auth.guestLinkCode).toBe('aB3dE5fG7hJ9')
+    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/api\/call-links\/aB3dE5fG7hJ9\/join$/)
+
+    mockFetchOnce(200, { status: 'success', message: '', data: null, errors: {} })
+    await auth.logout()
+
+    expect(auth.guestLinkCode).toBeNull()
+    expect(localStorage.getItem('guest_link_code')).toBeNull()
+  })
+
   it('выходит локально, даже если бэкенд недоступен', async () => {
     localStorage.setItem('access_token', '1|secret')
     vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'))
