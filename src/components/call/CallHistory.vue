@@ -113,11 +113,14 @@ onMounted(() => void load(1))
         </div>
         <BaseButton
           variant="ghost"
+          class="history__call"
+          icon="phone"
           :disabled="callStore.isBusy || !callStore.isOnline"
           :aria-label="`Перезвонить: ${counterpart(call).name}`"
+          title="Перезвонить"
           @click="callStore.startCall(counterpart(call))"
         >
-          Перезвонить
+          <span class="history__label">Перезвонить</span>
         </BaseButton>
       </li>
     </ul>
@@ -135,6 +138,7 @@ onMounted(() => void load(1))
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  container-type: inline-size;
 }
 
 .history__title {
@@ -166,7 +170,7 @@ onMounted(() => void load(1))
 }
 
 .history__direction--missed {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 
 .history__info {
@@ -177,7 +181,9 @@ onMounted(() => void load(1))
 }
 
 .history__name {
+  overflow-wrap: anywhere;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .history__meta {
@@ -188,6 +194,22 @@ onMounted(() => void load(1))
 .history__empty {
   margin: 0;
   color: var(--color-text-muted);
+}
+
+@container (max-width: 30rem) {
+  .history__item {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .history__label {
+    display: none;
+  }
+
+  .history__item .history__call {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+  }
 }
 
 .visually-hidden {

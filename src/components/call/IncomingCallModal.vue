@@ -22,8 +22,12 @@ const callStore = useCallStore()
           <span class="incoming__email">{{ callStore.counterpart?.email }}</span>
         </p>
         <div class="incoming__actions">
-          <BaseButton variant="danger" @click="callStore.reject()">Отклонить</BaseButton>
-          <BaseButton variant="success" @click="callStore.accept()">Принять</BaseButton>
+          <BaseButton variant="danger" icon="phone-off" @click="callStore.reject()">
+            Отклонить
+          </BaseButton>
+          <BaseButton variant="success" icon="video" @click="callStore.accept()">
+            Принять
+          </BaseButton>
         </div>
         <button type="button" class="incoming__audio" @click="callStore.accept({ video: false })">
           Ответить без видео
@@ -78,6 +82,7 @@ const callStore = useCallStore()
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .incoming__email {
@@ -89,13 +94,19 @@ const callStore = useCallStore()
 .incoming__actions {
   display: flex;
   gap: 0.75rem;
+  width: 100%;
   margin-top: 0.5rem;
 }
 
+.incoming__actions > * {
+  flex: 1;
+}
+
 .incoming__audio {
+  padding: 0.5rem;
   border: none;
   background: none;
-  color: var(--color-primary);
+  color: var(--color-accent-text);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 500;
@@ -104,6 +115,16 @@ const callStore = useCallStore()
 
 .incoming__audio:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 40rem) {
+  .overlay {
+    padding: 1rem;
+  }
+
+  .incoming {
+    padding: 1.75rem 1.25rem 1.25rem;
+  }
 }
 
 @keyframes pulse {

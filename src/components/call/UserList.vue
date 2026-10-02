@@ -90,19 +90,24 @@ onBeforeUnmount(() => {
         <div class="users__actions">
           <BaseButton
             variant="ghost"
+            class="users__call"
+            icon="phone"
             :disabled="callStore.isBusy || !callStore.isOnline"
             :aria-label="`Позвонить без видео: ${user.name}`"
             title="Позвонить без видео"
             @click="callStore.startCall(user, { video: false })"
           >
-            Голосом
+            <span class="users__label">Голосом</span>
           </BaseButton>
           <BaseButton
+            class="users__call"
+            icon="video"
             :disabled="callStore.isBusy || !callStore.isOnline"
             :aria-label="`Позвонить: ${user.name}`"
+            title="Видеозвонок"
             @click="callStore.startCall(user)"
           >
-            Позвонить
+            <span class="users__label">Позвонить</span>
           </BaseButton>
         </div>
       </li>
@@ -121,6 +126,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  container-type: inline-size;
 }
 
 .users__title {
@@ -181,7 +187,9 @@ onBeforeUnmount(() => {
 }
 
 .users__name {
+  overflow-wrap: anywhere;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .users__email {
@@ -195,5 +203,22 @@ onBeforeUnmount(() => {
 .users__empty {
   margin: 0;
   color: var(--color-text-muted);
+}
+
+/* В узкой колонке остаются только иконки: подписи есть в aria-label и title */
+@container (max-width: 30rem) {
+  .users__item {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .users__label {
+    display: none;
+  }
+
+  .users__actions .users__call {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+  }
 }
 </style>

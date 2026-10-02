@@ -12,7 +12,7 @@ defineProps<{ message: string }>()
   padding: 0.75rem 0.875rem;
   border-radius: var(--radius);
   background: var(--color-danger-soft);
-  color: var(--color-danger);
+  color: var(--color-danger-text);
   font-size: 0.875rem;
 }
 </style>

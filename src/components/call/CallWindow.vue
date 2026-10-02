@@ -2,8 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch, watchEffect } from 'vue'
 
 import CallChat from '@/components/call/CallChat.vue'
+import CallControl from '@/components/call/CallControl.vue'
 import CallDevices from '@/components/call/CallDevices.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
 import { useWakeLock } from '@/composables/useWakeLock'
 import { useCallStore } from '@/stores/call'
 import { useCallSettingsStore } from '@/stores/callSettings'
@@ -28,6 +28,8 @@ const fullscreen = ref(false)
 
 const canShareScreen = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia
 const canPictureInPicture = typeof document !== 'undefined' && document.pictureInPictureEnabled
+/** На iPhone полноэкранный режим есть только у <video>, не у произвольного элемента */
+const canFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled
 
 useWakeLock(computed(() => callStore.phase === 'active'))
 
@@ -284,79 +286,72 @@ onBeforeUnmount(() => {
 
       <footer class="call__controls">
         <template v-if="callStore.phase === 'ended'">
-          <BaseButton variant="ghost" class="call__control" @click="callStore.dismiss()">
-            Закрыть
-          </BaseButton>
+          <CallControl icon="close" label="Закрыть" @click="callStore.dismiss()" />
         </template>
         <template v-else>
-          <BaseButton
-            variant="ghost"
-            class="call__control"
+          <CallControl
+            :icon="callStore.micEnabled ? 'mic' : 'mic-off'"
+            label="Микрофон"
+            :hint="callStore.micEnabled ? 'Выключить микрофон' : 'Включить микрофон'"
+            :active="!callStore.micEnabled"
             :aria-pressed="!callStore.micEnabled"
             aria-keyshortcuts="M"
             @click="callStore.toggleMic()"
-          >
-            {{ callStore.micEnabled ? 'Выключить микрофон' : 'Включить микрофон' }}
-          </BaseButton>
-          <BaseButton
-            variant="ghost"
-            class="call__control"
+          />
+          <CallControl
+            :icon="callStore.cameraEnabled ? 'video' : 'video-off'"
+            label="Камера"
+            :hint="callStore.cameraEnabled ? 'Выключить камеру' : 'Включить камеру'"
+            :active="!callStore.cameraEnabled"
             :aria-pressed="!callStore.cameraEnabled"
             aria-keyshortcuts="V"
             @click="callStore.toggleCamera()"
-          >
-            {{ callStore.cameraEnabled ? 'Выключить камеру' : 'Включить камеру' }}
-          </BaseButton>
-          <BaseButton
+          />
+          <CallControl
             v-if="canShareScreen"
-            variant="ghost"
-            class="call__control"
+            icon="screen-share"
+            label="Экран"
+            :hint="callStore.screenSharing ? 'Остановить показ' : 'Показать экран'"
+            :active="callStore.screenSharing"
             :disabled="callStore.phase !== 'active'"
             :aria-pressed="callStore.screenSharing"
             @click="callStore.toggleScreenShare()"
-          >
-            {{ callStore.screenSharing ? 'Остановить показ' : 'Показать экран' }}
-          </BaseButton>
-          <BaseButton
-            variant="ghost"
-            class="call__control"
+          />
+          <CallControl
+            icon="chat"
+            label="Чат"
+            :hint="callStore.unreadChat > 0 ? `Чат, непрочитанных: ${callStore.unreadChat}` : 'Чат'"
+            :active="panel === 'chat'"
+            :badge="callStore.unreadChat"
             :disabled="callStore.phase !== 'active'"
             :aria-pressed="panel === 'chat'"
             aria-keyshortcuts="C"
             @click="togglePanel('chat')"
-          >
-            Чат
-            <span v-if="callStore.unreadChat > 0" class="call__badge">
-              {{ callStore.unreadChat }}
-              <span class="visually-hidden">непрочитанных</span>
-            </span>
-          </BaseButton>
-          <BaseButton
-            variant="ghost"
-            class="call__control"
+          />
+          <CallControl
+            icon="sliders"
+            label="Устройства"
+            :active="panel === 'devices'"
             :aria-pressed="panel === 'devices'"
             @click="togglePanel('devices')"
-          >
-            Устройства
-          </BaseButton>
-          <BaseButton
+          />
+          <CallControl
             v-if="canPictureInPicture && showRemoteVideo"
-            variant="ghost"
-            class="call__control"
+            icon="pip"
+            label="Окно"
+            hint="Картинка в картинке"
             @click="togglePictureInPicture()"
-          >
-            Картинка в картинке
-          </BaseButton>
-          <BaseButton
-            variant="ghost"
-            class="call__control"
+          />
+          <CallControl
+            v-if="canFullscreen"
+            :icon="fullscreen ? 'minimize' : 'maximize'"
+            :label="fullscreen ? 'Свернуть' : 'Весь экран'"
+            :hint="fullscreen ? 'Свернуть' : 'На весь экран'"
             :aria-pressed="fullscreen"
             aria-keyshortcuts="F"
             @click="toggleFullscreen()"
-          >
-            {{ fullscreen ? 'Свернуть' : 'На весь экран' }}
-          </BaseButton>
-          <BaseButton variant="danger" @click="callStore.hangup()">Завершить</BaseButton>
+          />
+          <CallControl icon="phone-off" label="Завершить" danger @click="callStore.hangup()" />
         </template>
       </footer>
     </div>
@@ -372,6 +367,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: var(--color-video-bg);
   color: var(--color-video-text);
+  color-scheme: dark;
 }
 
 .call__stage {
@@ -408,20 +404,23 @@ onBeforeUnmount(() => {
 
 .call__header {
   position: absolute;
-  top: 1.5rem;
+  top: max(1.5rem, env(safe-area-inset-top));
   left: 0;
   right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
+  padding: 0 1rem;
   text-align: center;
+  text-shadow: 0 1px 3px var(--color-video-shadow);
   pointer-events: none;
 }
 
 .call__name {
   margin: 0;
   font-size: 1.5rem;
+  overflow-wrap: anywhere;
 }
 
 .call__status {
@@ -465,7 +464,7 @@ onBeforeUnmount(() => {
 
 .call__error {
   position: absolute;
-  top: 1.5rem;
+  top: max(1.5rem, env(safe-area-inset-top));
   left: 50%;
   z-index: 2;
   display: flex;
@@ -544,26 +543,49 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 1.25rem;
+  gap: 0.75rem 0.5rem;
+  padding: 1rem max(1rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
 }
 
-.call__control {
-  color: var(--color-video-text);
+@media (orientation: portrait) {
+  .call__local,
+  .call--swapped .call__remote {
+    aspect-ratio: 3 / 4;
+  }
 }
 
-.call__control:hover:not(:disabled) {
-  color: var(--color-text);
-}
+@media (max-width: 40rem) {
+  .call__header {
+    top: max(1rem, env(safe-area-inset-top));
+  }
 
-.call__badge {
-  min-width: 1.25rem;
-  padding: 0 0.375rem;
-  border-radius: 999px;
-  background: var(--color-danger);
-  color: var(--color-on-accent);
-  font-size: 0.75rem;
-  line-height: 1.25rem;
+  .call__name {
+    font-size: 1.25rem;
+  }
+
+  .call__local,
+  .call--swapped .call__remote {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: 28vw;
+  }
+
+  .call__panel {
+    inset: 0.5rem;
+    max-width: none;
+  }
+
+  .call__panel > * {
+    width: 100%;
+  }
+
+  .call__controls {
+    flex-wrap: nowrap;
+    justify-content: space-evenly;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+  }
 }
 
 .visually-hidden {

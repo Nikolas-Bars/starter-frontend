@@ -154,6 +154,8 @@ defineExpose({ focus: () => input.value?.focus() })
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
 }
 

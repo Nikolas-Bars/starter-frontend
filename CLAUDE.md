@@ -31,6 +31,12 @@ oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
   `useCallAttention()` (blinking tab title, missed-call badge, system notification in background).
   User preferences (silent ringtone, chosen devices) are persisted by `useCallSettingsStore`.
 - Styling via CSS variables from `src/assets/main.css`; no hard-coded colors in components.
+  Every theme-dependent token is a `light-dark(light, dark)` pair: the system scheme applies by
+  default, `useThemeStore` pins it via `data-theme` on `<html>` (an inline script in `index.html`
+  applies the saved choice before the first paint). The call window forces `color-scheme: dark`.
+- Icons: `BaseIcon` (inline SVG paths, `currentColor`); `BaseButton` accepts `icon`.
+- Mobile: page-level breakpoint `@media (max-width: 40rem)`; list rows use container queries
+  (`@container (max-width: 30rem)`) to collapse buttons to icons, keeping text in `aria-label`.
 - User-facing text is Russian.
 
 ## Commands
