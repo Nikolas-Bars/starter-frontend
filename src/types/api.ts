@@ -50,6 +50,12 @@ export interface IceServer {
   credential?: string
 }
 
+/** POST /api/calls/ws-ticket: одноразовый пропуск на подключение к серверу звонков */
+export interface WebSocketTicket {
+  ticket: string
+  expires_in: number
+}
+
 export interface AuthToken {
   access_token: string
   token_type: 'Bearer'

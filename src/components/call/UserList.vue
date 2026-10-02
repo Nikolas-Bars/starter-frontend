@@ -72,17 +72,39 @@ onBeforeUnmount(() => {
 
     <ul v-if="users.length > 0" class="users__list">
       <li v-for="user in users" :key="user.id" class="users__item">
+        <span
+          class="users__presence"
+          :class="{ 'users__presence--online': callStore.isUserOnline(user.id) }"
+          :title="callStore.isUserOnline(user.id) ? 'В сети' : 'Не в сети'"
+          aria-hidden="true"
+        />
         <div class="users__info">
-          <span class="users__name">{{ user.name }}</span>
+          <span class="users__name">
+            {{ user.name }}
+            <span class="visually-hidden">
+              — {{ callStore.isUserOnline(user.id) ? 'в сети' : 'не в сети' }}
+            </span>
+          </span>
           <span class="users__email">{{ user.email }}</span>
         </div>
-        <BaseButton
-          :disabled="callStore.isBusy || !callStore.isOnline"
-          :aria-label="`Позвонить: ${user.name}`"
-          @click="callStore.startCall(user)"
-        >
-          Позвонить
-        </BaseButton>
+        <div class="users__actions">
+          <BaseButton
+            variant="ghost"
+            :disabled="callStore.isBusy || !callStore.isOnline"
+            :aria-label="`Позвонить без видео: ${user.name}`"
+            title="Позвонить без видео"
+            @click="callStore.startCall(user, { video: false })"
+          >
+            Голосом
+          </BaseButton>
+          <BaseButton
+            :disabled="callStore.isBusy || !callStore.isOnline"
+            :aria-label="`Позвонить: ${user.name}`"
+            @click="callStore.startCall(user)"
+          >
+            Позвонить
+          </BaseButton>
+        </div>
       </li>
     </ul>
 
@@ -118,17 +140,44 @@ onBeforeUnmount(() => {
 .users__item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
 
+.users__presence {
+  flex-shrink: 0;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+
+.users__presence--online {
+  background: var(--color-success);
+}
+
 .users__info {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
+}
+
+.users__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .users__name {

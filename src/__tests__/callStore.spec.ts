@@ -3,12 +3,16 @@ import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick, type Ref } from 'vue'
 
-import { MediaAccessError, type PeerConnectionOptions } from '@/composables/usePeerConnection'
+import {
+  MediaAccessError,
+  type OpenMediaOptions,
+  type PeerConnectionOptions,
+} from '@/composables/usePeerConnection'
 import type { SocketStatus } from '@/realtime/socket'
 import { useAuthStore } from '@/stores/auth'
-import { useCallStore } from '@/stores/call'
+import { RECONNECT_GRACE_MS, useCallStore } from '@/stores/call'
 import type { Call, IceServer, Paginated, User } from '@/types/api'
-import type { ClientMessage, ServerMessage } from '@/types/call'
+import type { ClientMessage, PeerMessage, ServerMessage } from '@/types/call'
 
 interface FakeSocket {
   status: SocketStatus
@@ -20,7 +24,9 @@ interface FakeSocket {
 
 interface FakePeer {
   connectionState: Ref<RTCPeerConnectionState>
-  openMedia: Mock<() => Promise<void>>
+  openMedia: Mock<(options?: OpenMediaOptions) => Promise<void>>
+  restartIce: Mock<() => Promise<void>>
+  sendMessage: Mock<(message: PeerMessage) => boolean>
   createConnection: Mock<(options: PeerConnectionOptions) => void>
   createOffer: Mock<() => Promise<void>>
   acceptOffer: Mock<(description: RTCSessionDescriptionInit) => Promise<void>>
@@ -94,9 +100,20 @@ vi.mock('@/composables/usePeerConnection', async (importOriginal) => {
         micEnabled,
         cameraEnabled,
         hasVideo: ref(true),
-        openMedia: vi.fn<() => Promise<void>>(async () => undefined),
+        screenSharing: ref(false),
+        remoteMedia: ref(null),
+        remoteVideoLive: ref(false),
+        stats: ref(null),
+        openMedia: vi.fn<(options?: OpenMediaOptions) => Promise<void>>(async () => undefined),
         createConnection: vi.fn<(options: PeerConnectionOptions) => void>(),
         createOffer: vi.fn<() => Promise<void>>(async () => undefined),
+        restartIce: vi.fn<() => Promise<void>>(async () => undefined),
+        switchDevice: vi.fn<(kind: 'audio' | 'video', deviceId: string) => Promise<void>>(
+          async () => undefined,
+        ),
+        startScreenShare: vi.fn<() => Promise<void>>(async () => undefined),
+        stopScreenShare: vi.fn<() => Promise<void>>(async () => undefined),
+        sendMessage: vi.fn<(message: PeerMessage) => boolean>(() => true),
         acceptOffer: vi.fn<(description: RTCSessionDescriptionInit) => Promise<void>>(
           async () => undefined,
         ),
@@ -109,9 +126,9 @@ vi.mock('@/composables/usePeerConnection', async (importOriginal) => {
         setMicEnabled: vi.fn<(enabled: boolean) => boolean>(
           (enabled) => (micEnabled.value = enabled),
         ),
-        setCameraEnabled: vi.fn<(enabled: boolean) => boolean>(
-          (enabled) => (cameraEnabled.value = enabled),
-        ),
+        setCameraEnabled: vi.fn<(enabled: boolean) => Promise<void>>(async (enabled) => {
+          cameraEnabled.value = enabled
+        }),
         close: vi.fn<() => void>(),
       }
       fakes.peer = peer
@@ -126,6 +143,7 @@ vi.mock('@/api/calls', () => ({
       ice_servers: [{ urls: ['stun:stun.test:3478'] }],
     })),
     history: vi.fn<() => Promise<Paginated<Call>>>(),
+    webSocketTicket: vi.fn<() => Promise<{ ticket: string; expires_in: number }>>(),
   },
 }))
 
@@ -170,6 +188,7 @@ function peer(): FakePeer {
 describe('call store', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+    localStorage.clear()
     setActivePinia(createPinia())
     useAuthStore().user = me
   })
@@ -365,5 +384,145 @@ describe('call store', () => {
     })
 
     expect(store.endMessage).toBe('Собеседник не ответил')
+  })
+
+  async function activeOutgoingCall() {
+    const store = openStore()
+    await store.startCall(bob)
+    socket().emit({ type: 'call.ringing', data: { call: makeCall() } })
+    socket().emit({ type: 'call.accepted', data: { call: makeCall({ status: 'active' }) } })
+    await flushPromises()
+    peer().connectionState.value = 'connected'
+    await nextTick()
+    return store
+  }
+
+  it('не рвёт разговор при обрыве сокета и возобновляет его после переподключения', async () => {
+    const store = await activeOutgoingCall()
+
+    socket().setStatus('closed')
+
+    expect(store.phase).toBe('active')
+    expect(store.reconnecting).toBe(true)
+
+    socket().setStatus('open')
+    socket().emit({ type: 'ready', data: { user_id: me.id } })
+    expect(lastSent()).toEqual({ type: 'call.resume', data: { call_id: 10 } })
+
+    socket().emit({ type: 'call.resumed', data: { call: makeCall({ status: 'active' }) } })
+    expect(store.reconnecting).toBe(false)
+
+    vi.advanceTimersByTime(RECONNECT_GRACE_MS)
+    expect(store.phase).toBe('active')
+  })
+
+  it('завершает разговор, если сервер звонков не вернулся вовремя', async () => {
+    const store = await activeOutgoingCall()
+
+    socket().setStatus('closed')
+    vi.advanceTimersByTime(RECONNECT_GRACE_MS)
+
+    expect(store.phase).toBe('ended')
+    expect(store.endMessage).toBe('Соединение с сервером звонков потеряно')
+  })
+
+  it('завершает звонок, если сервер уже закрыл его, пока нас не было', async () => {
+    const store = await activeOutgoingCall()
+
+    socket().setStatus('closed')
+    socket().setStatus('open')
+    socket().emit({ type: 'error', data: { request: 'call.resume', message: 'Звонок не найден' } })
+
+    expect(store.phase).toBe('ended')
+    expect(store.endMessage).toBe('Звонок завершён')
+  })
+
+  it('при обрыве прямого соединения звонящий перезапускает ICE и ждёт восстановления', async () => {
+    const store = await activeOutgoingCall()
+
+    peer().connectionState.value = 'failed'
+    await nextTick()
+
+    expect(store.phase).toBe('active')
+    expect(store.reconnecting).toBe(true)
+    expect(peer().restartIce).toHaveBeenCalled()
+
+    peer().connectionState.value = 'connected'
+    await nextTick()
+    expect(store.reconnecting).toBe(false)
+
+    vi.advanceTimersByTime(RECONNECT_GRACE_MS)
+    expect(store.phase).toBe('active')
+  })
+
+  it('сбрасывает разговор, если прямое соединение так и не восстановилось', async () => {
+    const store = await activeOutgoingCall()
+
+    peer().connectionState.value = 'disconnected'
+    await nextTick()
+    vi.advanceTimersByTime(RECONNECT_GRACE_MS)
+
+    expect(store.phase).toBe('ended')
+    expect(lastSent()).toEqual({ type: 'call.hangup', data: { call_id: 10 } })
+  })
+
+  it('знает, кто из пользователей в сети', () => {
+    const store = openStore()
+
+    socket().emit({ type: 'presence.snapshot', data: { user_ids: [2, 3] } })
+    socket().emit({ type: 'presence.changed', data: { user_id: 3, online: false } })
+    socket().emit({ type: 'presence.changed', data: { user_id: 4, online: true } })
+
+    expect([2, 3, 4].map((id) => store.isUserOnline(id))).toEqual([true, false, true])
+
+    socket().setStatus('closed')
+    expect(store.isUserOnline(2)).toBe(false)
+  })
+
+  it('считает пропущенные входящие, пока их не посмотрели', () => {
+    const store = openStore()
+    const incoming = makeCall({ caller: bob, callee: me })
+
+    socket().emit({ type: 'call.incoming', data: { call: incoming } })
+    socket().emit({
+      type: 'call.ended',
+      data: { call: { ...incoming, status: 'missed' }, reason: 'missed' },
+    })
+
+    expect(store.missedCount).toBe(1)
+
+    store.clearMissed()
+    expect(store.missedCount).toBe(0)
+  })
+
+  it('отвечает без видео', async () => {
+    const store = openStore()
+    socket().emit({ type: 'call.incoming', data: { call: makeCall({ caller: bob, callee: me }) } })
+
+    await store.accept({ video: false })
+
+    expect(peer().openMedia).toHaveBeenCalledWith(expect.objectContaining({ video: false }))
+  })
+
+  it('отправляет и принимает сообщения чата, считая непрочитанные', async () => {
+    const store = await activeOutgoingCall()
+    const options = peer().createConnection.mock.calls[0]?.[0]
+
+    expect(store.sendChat('  Привет  ')).toBe(true)
+    expect(peer().sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat', text: 'Привет' }),
+    )
+    expect(store.sendChat('   ')).toBe(false)
+
+    options?.onMessage?.({ type: 'chat', id: 'a', text: 'И тебе', sent_at: '2026-10-01T10:01:00Z' })
+
+    expect(store.chatMessages.map((message) => [message.mine, message.text])).toEqual([
+      [true, 'Привет'],
+      [false, 'И тебе'],
+    ])
+    expect(store.unreadChat).toBe(1)
+
+    store.setChatOpen(true)
+    expect(store.unreadChat).toBe(0)
   })
 })

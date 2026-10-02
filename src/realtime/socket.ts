@@ -14,6 +14,11 @@ const DEFAULT_RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000]
 const DEFAULT_HEARTBEAT_MS = 25000
 
 export interface SignalingSocketOptions {
+  /**
+   * Одноразовый билет на подключение в обмен на токен: сам токен в адрес сокета не попадает
+   * (адреса оседают в логах прокси). null — токен недействителен.
+   */
+  issueTicket: (token: string) => Promise<string | null>
   /** Задержки между попытками переподключения; последняя повторяется бесконечно */
   reconnectDelays?: number[]
   /** Как часто слать ping, чтобы прокси и сервер не закрыли молчащее соединение */
@@ -36,17 +41,21 @@ export class SignalingSocket {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private currentStatus: SocketStatus = 'idle'
+  /** Растёт при каждом connect/disconnect: ответ на запрос билета от прошлой сессии игнорируется */
+  private session = 0
 
   private readonly messageListeners = new Set<Listener<ServerMessage>>()
   private readonly statusListeners = new Set<Listener<SocketStatus>>()
+  private readonly issueTicket: SignalingSocketOptions['issueTicket']
   private readonly reconnectDelays: number[]
   private readonly heartbeatMs: number
   private readonly createSocket: (url: string) => WebSocket
 
   constructor(
     private readonly url: string,
-    options: SignalingSocketOptions = {},
+    options: SignalingSocketOptions,
   ) {
+    this.issueTicket = options.issueTicket
     this.reconnectDelays = options.reconnectDelays ?? DEFAULT_RECONNECT_DELAYS
     this.heartbeatMs = options.heartbeatMs ?? DEFAULT_HEARTBEAT_MS
     this.createSocket = options.createSocket ?? ((socketUrl) => new WebSocket(socketUrl))
@@ -57,16 +66,17 @@ export class SignalingSocket {
   }
 
   connect(token: string): void {
-    if (this.token === token && this.socket !== null) {
+    if (this.token === token && this.currentStatus !== 'idle' && this.currentStatus !== 'closed') {
       return
     }
 
     this.disconnect()
     this.token = token
-    this.open()
+    void this.open()
   }
 
   disconnect(): void {
+    this.session += 1
     this.token = null
     this.attempt = 0
     this.clearTimers()
@@ -98,14 +108,37 @@ export class SignalingSocket {
     return () => this.statusListeners.delete(listener)
   }
 
-  private open(): void {
-    if (this.token === null) {
+  private async open(): Promise<void> {
+    const token = this.token
+    if (token === null) {
       return
     }
 
+    const session = this.session
     this.setStatus('connecting')
 
-    const socket = this.createSocket(`${this.url}?token=${encodeURIComponent(this.token)}`)
+    let ticket: string | null
+    try {
+      ticket = await this.issueTicket(token)
+    } catch {
+      if (session === this.session) {
+        this.setStatus('closed')
+        this.scheduleReconnect()
+      }
+      return
+    }
+
+    if (session !== this.session) {
+      return
+    }
+
+    if (ticket === null) {
+      this.token = null
+      this.setStatus('unauthorized')
+      return
+    }
+
+    const socket = this.createSocket(`${this.url}?ticket=${encodeURIComponent(ticket)}`)
     this.socket = socket
 
     socket.onmessage = (event: MessageEvent) => {
@@ -150,7 +183,7 @@ export class SignalingSocket {
     const delay =
       this.reconnectDelays[Math.min(this.attempt, this.reconnectDelays.length - 1)] ?? 1000
     this.attempt += 1
-    this.reconnectTimer = setTimeout(() => this.open(), delay)
+    this.reconnectTimer = setTimeout(() => void this.open(), delay)
   }
 
   private startHeartbeat(): void {

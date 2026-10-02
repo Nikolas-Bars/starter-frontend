@@ -1,13 +1,51 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import CallHistory from '@/components/call/CallHistory.vue'
 import UserList from '@/components/call/UserList.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { useNotificationPermission } from '@/composables/useCallAttention'
 import { useCallStore } from '@/stores/call'
+import { useCallSettingsStore } from '@/stores/callSettings'
 
 const callStore = useCallStore()
+const settings = useCallSettingsStore()
+const notifications = useNotificationPermission()
+
+/** Сколько пропущенных было, когда пользователь открыл страницу: счётчик сбрасывается сразу */
+const missedOnArrival = ref(0)
+
+function markMissedSeen(): void {
+  if (document.visibilityState !== 'visible' || callStore.missedCount === 0) {
+    return
+  }
+  missedOnArrival.value = callStore.missedCount
+  callStore.clearMissed()
+}
+
+onMounted(() => {
+  markMissedSeen()
+  document.addEventListener('visibilitychange', markMissedSeen)
+  window.addEventListener('focus', markMissedSeen)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', markMissedSeen)
+  window.removeEventListener('focus', markMissedSeen)
+})
+
+function missedText(count: number): string {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  const word =
+    mod10 === 1 && mod100 !== 11
+      ? 'пропущенный звонок'
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? 'пропущенных звонка'
+        : 'пропущенных звонков'
+  return `У вас ${count} ${word}`
+}
 
 const connection = computed(() => {
   switch (callStore.socketStatus) {
@@ -33,6 +71,29 @@ const connection = computed(() => {
       </div>
       <RouterLink :to="{ name: 'welcome' }">На главную</RouterLink>
     </header>
+
+    <div class="calls__settings">
+      <label class="calls__toggle">
+        <input v-model="settings.ringtoneMuted" type="checkbox" />
+        Входящие без звука
+      </label>
+      <button
+        v-if="notifications.permission.value === 'default'"
+        type="button"
+        class="calls__link"
+        @click="notifications.requestPermission()"
+      >
+        Уведомлять о звонках, когда вкладка в фоне
+      </button>
+      <span v-else-if="notifications.permission.value === 'denied'" class="calls__hint">
+        Уведомления о звонках запрещены в настройках браузера
+      </span>
+    </div>
+
+    <p v-if="missedOnArrival > 0" class="calls__missed" role="status">
+      {{ missedText(missedOnArrival) }}
+      <button type="button" class="calls__link" @click="missedOnArrival = 0">Понятно</button>
+    </p>
 
     <div v-if="callStore.error" class="calls__error">
       <FormAlert :message="callStore.error" />
@@ -91,6 +152,51 @@ const connection = computed(() => {
 
 .calls__status--online .calls__dot {
   background: var(--color-success);
+}
+
+.calls__settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+.calls__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.calls__link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.calls__link:hover {
+  text-decoration: underline;
+}
+
+.calls__hint {
+  color: var(--color-text-muted);
+}
+
+.calls__missed {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-weight: 600;
 }
 
 .calls__error {

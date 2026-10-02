@@ -16,13 +16,32 @@ export type CallEndReason = Exclude<CallStatus, 'ringing' | 'active'> | 'answere
 export type ClientMessage =
   | { type: 'ping' }
   | { type: 'call.invite'; data: { callee_id: number } }
-  | { type: 'call.accept' | 'call.reject' | 'call.hangup'; data: { call_id: number } }
+  | {
+      type: 'call.accept' | 'call.reject' | 'call.hangup' | 'call.resume'
+      data: { call_id: number }
+    }
   | { type: SignalType; data: { call_id: number; payload: SignalPayload } }
 
 export type ServerMessage =
   | { type: 'ready'; data: { user_id: number } }
   | { type: 'pong' }
-  | { type: 'call.ringing' | 'call.incoming' | 'call.accepted'; data: { call: Call } }
+  | {
+      type: 'call.ringing' | 'call.incoming' | 'call.accepted' | 'call.resumed'
+      data: { call: Call }
+    }
   | { type: 'call.ended'; data: { call: Call; reason: CallEndReason } }
   | { type: SignalType; data: { call_id: number; payload: SignalPayload } }
+  | { type: 'presence.snapshot'; data: { user_ids: number[] } }
+  | { type: 'presence.changed'; data: { user_id: number; online: boolean } }
   | { type: 'error'; data: { request: string | null; message: string } }
+
+/** Что включено у стороны звонка */
+export interface MediaState {
+  mic: boolean
+  camera: boolean
+  screen: boolean
+}
+
+/** Сообщения между браузерами по прямому каналу данных, мимо сервера */
+export type PeerMessage =
+  ({ type: 'media' } & MediaState) | { type: 'chat'; id: string; text: string; sent_at: string }
