@@ -130,8 +130,12 @@ export const useCallStore = defineStore('call', () => {
     finish('Соединение с сервером звонков потеряно')
   })
 
+  /** Остальные события сокета (чаты) обрабатывают другие сторы — через onServerMessage */
+  const serverListeners = new Set<(message: ServerMessage) => void>()
+
   socket.onMessage((message) => {
     void handle(message).catch(() => connectionFailed())
+    serverListeners.forEach((listener) => listener(message))
   })
 
   watch(peer.connectionState, (state) => {
@@ -337,6 +341,17 @@ export const useCallStore = defineStore('call', () => {
     if (open) {
       unreadChat.value = 0
     }
+  }
+
+  /** Подписка на все сообщения сервера; сокет по-прежнему один, и владеет им этот стор */
+  /** Сообщить, что пользователь печатает: без гарантии доставки, без ответа */
+  function notifyTyping(chatId: number): void {
+    socket.send({ type: 'chat.typing', data: { chat_id: chatId } })
+  }
+
+  function onServerMessage(listener: (message: ServerMessage) => void): () => void {
+    serverListeners.add(listener)
+    return () => serverListeners.delete(listener)
   }
 
   function isUserOnline(userId: number): boolean {
@@ -694,6 +709,8 @@ export const useCallStore = defineStore('call', () => {
     selectDevice,
     sendChat,
     setChatOpen,
+    onServerMessage,
+    notifyTyping,
     isUserOnline,
     clearMissed,
     dismiss,

@@ -45,7 +45,7 @@ src/
 │   ├── ui/         # BaseInput, BaseButton, BaseCard, FormAlert
 │   ├── auth/       # LoginForm, RegisterForm
 │   └── call/       # UserList, CallHistory, IncomingCallModal, CallWindow
-├── views/          # LoginView, RegisterView, WelcomeView, CallsView
+├── views/          # LoginView, RegisterView, ChatsView, ProfileView, CallsView, CallLinkView
 ├── types/          # api.ts — ответы бэкенда; call.ts — протокол WebSocket-сообщений
 ├── utils/          # форматирование длительности и дат
 └── __tests__/      # Vitest

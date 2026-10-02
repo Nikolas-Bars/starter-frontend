@@ -71,9 +71,9 @@ const connection = computed(() => {
           {{ connection.text }}
         </p>
       </div>
-      <RouterLink class="calls__back" :to="{ name: 'welcome' }">
+      <RouterLink class="calls__back" :to="{ name: 'chats' }">
         <BaseIcon name="arrow-left" />
-        На главную
+        К чатам
       </RouterLink>
     </header>
 

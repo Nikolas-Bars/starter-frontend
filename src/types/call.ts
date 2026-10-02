@@ -1,4 +1,10 @@
-import type { Call, CallStatus } from '@/types/api'
+import type {
+  Call,
+  CallStatus,
+  ChatMessage,
+  ChatReactionState,
+  ChatReadState,
+} from '@/types/api'
 
 /**
  * Протокол сигнализации с WebSocket-сервером бэкенда (app/Modules/Call/WebSockets/MessageRouter.php).
@@ -21,6 +27,7 @@ export type ClientMessage =
       data: { call_id: number }
     }
   | { type: SignalType; data: { call_id: number; payload: SignalPayload } }
+  | { type: 'chat.typing'; data: { chat_id: number } }
 
 export type ServerMessage =
   | { type: 'ready'; data: { user_id: number } }
@@ -34,6 +41,14 @@ export type ServerMessage =
   | { type: 'presence.snapshot'; data: { user_ids: number[] } }
   | { type: 'presence.changed'; data: { user_id: number; online: boolean } }
   | { type: 'error'; data: { request: string | null; message: string } }
+  /** События чатов: сервер пересылает их из API (RealtimeBus) всем вкладкам участников */
+  | { type: 'chat.message'; data: { message: ChatMessage } }
+  | { type: 'chat.read'; data: ChatReadState }
+  | { type: 'chat.reaction'; data: ChatReactionState }
+  /** Собеседник набирает сообщение; сервер пересылает это сразу и нигде не хранит */
+  | { type: 'chat.typing'; data: { chat_id: number; user_id: number } }
+  /** Папки изменились в другой вкладке: перечитать */
+  | { type: 'chat.folders'; data: unknown }
 
 /** Что включено у стороны звонка */
 export interface MediaState {

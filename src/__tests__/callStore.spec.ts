@@ -150,6 +150,7 @@ vi.mock('@/api/calls', () => ({
 const me: User = {
   id: 1,
   name: 'Иван',
+  username: null,
   email: 'ivan@example.com',
   email_verified_at: null,
   created_at: null,

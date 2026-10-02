@@ -35,6 +35,7 @@ const owner = computed<User | null>(() =>
     ? null
     : {
         ...invite.value.owner,
+        username: null,
         email: '',
         email_verified_at: null,
         created_at: null,
@@ -123,7 +124,7 @@ async function call(video: boolean): Promise<void> {
   <BaseCard v-else-if="loadError || invite === null" title="Ссылка не работает">
     <FormAlert :message="loadError" />
     <template #footer>
-      <RouterLink :to="{ name: 'welcome' }">На главную</RouterLink>
+      <RouterLink :to="{ name: 'chats' }">На главную</RouterLink>
     </template>
   </BaseCard>
 
