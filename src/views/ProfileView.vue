@@ -42,7 +42,7 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <BaseCard title="Профиль" :subtitle="auth.user?.email">
+  <BaseCard title="Профиль" :subtitle="auth.user?.email ?? undefined">
     <form class="profile" novalidate @submit.prevent="save">
       <BaseInput
         v-model="name"

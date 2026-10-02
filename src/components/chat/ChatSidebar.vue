@@ -138,9 +138,7 @@ async function openChat(user: User): Promise<void> {
               <BaseAvatar :name="user.name" :online="callStore.isUserOnline(user.id)" />
               <span class="sidebar__user-info">
                 <span class="sidebar__user-name">{{ user.name }}</span>
-                <span class="sidebar__user-meta">
-                  {{ user.username ? `@${user.username}` : user.email }}
-                </span>
+                <span v-if="user.username" class="sidebar__user-meta">@{{ user.username }}</span>
               </span>
               <span v-if="opening === user.id" class="sidebar__spinner" aria-hidden="true" />
             </button>

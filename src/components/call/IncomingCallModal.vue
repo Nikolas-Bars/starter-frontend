@@ -23,7 +23,7 @@ const callStore = useCallStore()
             {{
               callStore.counterpart?.is_guest
                 ? 'Гость по вашей ссылке'
-                : callStore.counterpart?.email
+                : callStore.counterpart?.username && `@${callStore.counterpart.username}`
             }}
           </span>
         </p>

@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
   <section class="users">
     <h2 class="users__title">Пользователи</h2>
 
-    <BaseInput v-model="search" label="Поиск по имени или email" />
+    <BaseInput v-model="search" label="Поиск по имени, нику или email" />
 
     <FormAlert :message="error" />
 
@@ -85,7 +85,7 @@ onBeforeUnmount(() => {
               — {{ callStore.isUserOnline(user.id) ? 'в сети' : 'не в сети' }}
             </span>
           </span>
-          <span class="users__email">{{ user.email }}</span>
+          <span v-if="user.username" class="users__email">@{{ user.username }}</span>
         </div>
         <div class="users__actions">
           <BaseButton
