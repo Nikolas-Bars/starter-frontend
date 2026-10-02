@@ -4,6 +4,14 @@
   --color-primary-soft: rgb(79 70 229 / 0.2);
   --color-danger: #dc2626;
   --color-danger-soft: #fef2f2;
+  --color-danger-hover: #b91c1c;
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-soft: #f0fdf4;
+  --color-on-accent: #ffffff;
+  --color-overlay: rgb(17 24 39 / 0.55);
+  --color-video-bg: #0b1020;
+  --color-video-text: #e5e7eb;
   --color-text: #111827;
   --color-text-muted: #6b7280;
   --color-border: #d1d5db;

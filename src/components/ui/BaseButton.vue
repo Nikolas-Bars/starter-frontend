@@ -2,19 +2,20 @@
 withDefaults(
   defineProps<{
     type?: 'button' | 'submit'
-    variant?: 'primary' | 'ghost'
+    variant?: 'primary' | 'ghost' | 'danger' | 'success'
     loading?: boolean
+    disabled?: boolean
   }>(),
-  { type: 'button', variant: 'primary', loading: false },
+  { type: 'button', variant: 'primary', loading: false, disabled: false },
 )
 </script>
 
 <template>
   <button
     class="button"
-    :class="`button--${variant}`"
+    :class="[`button--${variant}`, { 'button--loading': loading }]"
     :type="type"
-    :disabled="loading"
+    :disabled="disabled || loading"
     :aria-busy="loading"
   >
     <span v-if="loading" class="button__spinner" aria-hidden="true" />
@@ -40,6 +41,11 @@ withDefaults(
 }
 
 .button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button--loading:disabled {
   opacity: 0.7;
   cursor: progress;
 }
@@ -51,6 +57,24 @@ withDefaults(
 
 .button--primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
+}
+
+.button--danger {
+  background: var(--color-danger);
+  color: var(--color-on-accent);
+}
+
+.button--danger:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+}
+
+.button--success {
+  background: var(--color-success);
+  color: var(--color-on-accent);
+}
+
+.button--success:hover:not(:disabled) {
+  background: var(--color-success-hover);
 }
 
 .button--ghost {

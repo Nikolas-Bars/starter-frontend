@@ -15,6 +15,10 @@ oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
 - Form submission state goes through `useFormSubmit()`; show `fieldError('field')` under inputs and
   `message` in `FormAlert`.
 - Auth state only in `useAuthStore`; access rules via route `meta.requiresAuth` / `meta.guestOnly`.
+- Video calls: `useCallStore` is the only owner of call state. It drives `SignalingSocket`
+  (`src/realtime/socket.ts`, protocol types in `src/types/call.ts` mirror the backend `MessageRouter`)
+  and `usePeerConnection()` (WebRTC). `IncomingCallModal` and `CallWindow` are mounted globally in
+  `App.vue`, which connects the socket whenever an auth token exists.
 - Styling via CSS variables from `src/assets/main.css`; no hard-coded colors in components.
 - User-facing text is Russian.
 

@@ -1,0 +1,21 @@
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY . .
+
+# Пустой VITE_API_URL — запросы идут на /api того же домена
+ARG VITE_API_URL=""
+ARG VITE_WS_URL=""
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_WS_URL=$VITE_WS_URL
+
+RUN npm run build-only
+
+# Caddy раздаёт статику и проксирует API; конфиг монтируется из starter-backend/deploy/Caddyfile
+FROM caddy:2-alpine
+
+COPY --from=build /app/dist /srv
