@@ -18,3 +18,9 @@ const dateTimeFormat = new Intl.DateTimeFormat('ru-RU', {
 export function formatDateTime(iso: string): string {
   return dateTimeFormat.format(new Date(iso))
 }
+
+const timeFormat = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
+
+export function formatTime(iso: string): string {
+  return timeFormat.format(new Date(iso))
+}

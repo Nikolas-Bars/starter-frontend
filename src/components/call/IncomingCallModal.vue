@@ -25,6 +25,9 @@ const callStore = useCallStore()
           <BaseButton variant="danger" @click="callStore.reject()">Отклонить</BaseButton>
           <BaseButton variant="success" @click="callStore.accept()">Принять</BaseButton>
         </div>
+        <button type="button" class="incoming__audio" @click="callStore.accept({ video: false })">
+          Ответить без видео
+        </button>
       </div>
     </div>
   </Teleport>
@@ -87,6 +90,20 @@ const callStore = useCallStore()
   display: flex;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+.incoming__audio {
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.incoming__audio:hover {
+  text-decoration: underline;
 }
 
 @keyframes pulse {
