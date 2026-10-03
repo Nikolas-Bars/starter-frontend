@@ -1,7 +1,11 @@
-# Starter Web
+# Kolyansburg Web
 
-Заготовка фронтенда на Vue 3: регистрация, вход и приветственная страница для авторизованного
-пользователя. Работает с [Starter API](../starter-backend).
+Веб-версия семейного мессенджера Kolyansburg — https://call-yansburg.com. Работает с
+[Kolyansburg API](../starter-backend); Android-приложение — [starter-mobile](../starter-mobile).
+
+Что умеет: вход и регистрация, профиль с ником, поиск людей, чаты с папками, реакциями,
+«прочитано» и «печатает…», фото, видео, голосовые и файлы в чатах, видеозвонки 1:1 с историей и
+демонстрацией экрана, личная ссылка для звонка и вход гостем, светлая и тёмная тема.
 
 Стек: Vue 3 (`<script setup>` + TypeScript), Vite, Vue Router, Pinia, Vitest, oxlint + ESLint, Prettier.
 
@@ -32,22 +36,39 @@ WebSocket-сервера звонков — `VITE_WS_URL` (по умолчани
 
 Камера и микрофон доступны браузеру только на `localhost` или по HTTPS — на сервере нужен HTTPS.
 
+## Файлы в чатах
+
+Скрепка в поле ввода, перетаскивание в переписку или вставка из буфера — до 10 файлов по 50 МБ в
+одном сообщении, подпись необязательна. Кнопка микрофона записывает голосовое. Фото и видео сервер
+сжимает (галочка «Без сжатия (отправить файлом)»); пока идёт сжатие, в сообщении «Сжимаем…»,
+готовое приходит событием `chat.attachment`. Каждый файл загружается отдельно с прогрессом
+(`api/attachments.ts`, `XMLHttpRequest`), уже загруженные при повторе не отправляются заново.
+
+## Название и иконка
+
+Название — `<title>` в `index.html`. Иконка: `public/favicon.svg` (исходник знака: башня-облачко,
+цвета `#1C1A2F` и `#F1A23B`), `public/favicon.ico` (16–64 px) и `public/apple-touch-icon.png`
+(180 px, домашний экран iPhone). Иконки Android-приложения сделаны из того же знака
+(`starter-mobile/assets`).
+
 ## Структура
 
 ```
 src/
-├── api/            # http.ts (fetch + Bearer + ApiError), auth.ts, users.ts, calls.ts, tokenStorage.ts
-├── stores/         # auth.ts — пользователь и токен; call.ts — состояние звонка
+├── api/            # http.ts (fetch + Bearer + ApiError), auth, users, chats, attachments, calls, callLinks
+├── stores/         # auth, chat (чаты и переписки), chatFolders, call (звонок), callSettings, theme
 ├── router/         # маршруты и guard'ы: meta.requiresAuth / meta.guestOnly
-├── realtime/       # socket.ts — WebSocket сигнализации с переподключением и ping
-├── composables/    # useFormSubmit — формы; usePeerConnection — камера, микрофон, WebRTC
+├── realtime/       # socket.ts — WebSocket с переподключением и ping; callSounds.ts — звуки звонка
+├── composables/    # useFormSubmit, usePeerConnection (WebRTC), useCallSounds, useCallAttention, useWakeLock
 ├── components/
-│   ├── ui/         # BaseInput, BaseButton, BaseCard, FormAlert
+│   ├── ui/         # BaseInput, BaseButton, BaseCard, BaseAvatar, BaseIcon, FormAlert
 │   ├── auth/       # LoginForm, RegisterForm
-│   └── call/       # UserList, CallHistory, IncomingCallModal, CallWindow
+│   ├── chat/       # ChatSidebar, ChatThread, ChatComposer, ChatMessageBubble, ChatAttachments, ChatVoicePlayer, папки
+│   ├── call/       # UserList, CallHistory, IncomingCallModal, CallWindow, CallChat, CallLinkCard
+│   └── theme/      # ThemeToggle
 ├── views/          # LoginView, RegisterView, ChatsView, ProfileView, CallsView, CallLinkView
 ├── types/          # api.ts — ответы бэкенда; call.ts — протокол WebSocket-сообщений
-├── utils/          # форматирование длительности и дат
+├── utils/          # format.ts — даты и длительности; chatCall.ts, chatAttachment.ts — подписи в чате
 └── __tests__/      # Vitest
 ```
 
