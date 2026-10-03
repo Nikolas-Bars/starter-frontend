@@ -1,11 +1,15 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
+import { uploadAttachment } from '@/api/attachments'
 import { chatsApi } from '@/api/chats'
+import { ApiError } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import type {
   Chat,
+  ChatAttachment,
+  ChatAttachmentState,
   ChatMessage,
   ChatReaction,
   ChatReactionState,
@@ -13,6 +17,7 @@ import type {
   User,
 } from '@/types/api'
 import type { ServerMessage } from '@/types/call'
+import { guessKind } from '@/utils/chatAttachment'
 
 /** Совпадает с лимитом бэкенда (SendChatMessageRequest::MAX_LENGTH) */
 export const MAX_MESSAGE_LENGTH = 4000
@@ -25,12 +30,37 @@ export const TYPING_NOTIFY_INTERVAL_MS = 3000
 /** Сколько показывать «печатает…» после последнего такого события */
 export const TYPING_VISIBLE_MS = 6000
 
+/** Файл, который пользователь отправляет */
+export interface OutgoingFile {
+  file: Blob
+  name: string
+  /** Записанное голосовое */
+  voice?: boolean
+  /** Без сжатия */
+  asFile?: boolean
+  /** Длительность записанного голосового — показать, пока оно загружается */
+  durationMs?: number
+}
+
+/** Загрузка своего файла, пока сообщение не отправлено */
+export interface LocalUpload {
+  source: OutgoingFile
+  /** Доля отправленного, 0–1 */
+  progress: number
+  /** Файл уже на сервере: при повторе заново не загружается */
+  attachmentId: number | null
+}
+
 /**
  * Сообщение в переписке. Своё неотправленное живёт с id = 0 и статусом:
  * sending — ждём ответа сервера, failed — не ушло, можно повторить.
  */
 export interface ThreadMessage extends ChatMessage {
   pending?: 'sending' | 'failed'
+  /** Свои файлы неотправленного сообщения, в том же порядке, что attachments */
+  uploads?: LocalUpload[]
+  /** Почему не ушло, если сервер объяснил (например, кончилось место) */
+  error?: string
 }
 
 export interface Thread {
@@ -77,6 +107,12 @@ export const useChatStore = defineStore('chat', () => {
   const typingTimers = new Map<number, ReturnType<typeof setTimeout>>()
   /** Когда мы последний раз сообщили, что печатаем, по id чата */
   const typingNotifiedAt = new Map<number, number>()
+  /**
+   * Свои фото и видео из памяти браузера по id вложения: показываем их, пока сервер сжимает файл,
+   * а для отправленных — пока не загрузилась картинка с сервера
+   */
+  const previews = ref<Record<number, string>>({})
+  const localPreviewUrls = new Set<string>()
 
   const sortedChats = computed(() =>
     Object.values(chats.value)
@@ -206,11 +242,11 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /** @returns false — текст пустой */
-  function send(chatId: number, text: string): boolean {
+  /** @returns false — нечего отправлять */
+  function send(chatId: number, text: string, files: OutgoingFile[] = []): boolean {
     const body = text.trim().slice(0, MAX_MESSAGE_LENGTH)
     const authorId = myId()
-    if (body === '' || authorId === null) {
+    if ((body === '' && files.length === 0) || authorId === null) {
       return false
     }
 
@@ -223,6 +259,8 @@ export const useChatStore = defineStore('chat', () => {
       body,
       call: null,
       reactions: [],
+      attachments: files.map(localAttachment),
+      uploads: files.map((source) => ({ source, progress: 0, attachmentId: null })),
       created_at: new Date().toISOString(),
       pending: 'sending',
     }
@@ -269,21 +307,84 @@ export const useChatStore = defineStore('chat', () => {
     )
     if (local !== undefined) {
       local.pending = 'sending'
+      local.error = undefined
       void deliver(local)
     }
   }
 
+  /** Заглушка своего файла: пока он загружается, показываем его из памяти браузера */
+  function localAttachment(source: OutgoingFile, index: number): ChatAttachment {
+    const kind = source.voice ? 'voice' : guessKind(source.file as File, source.asFile)
+    let url: string | null = null
+    if ((kind === 'image' || kind === 'video') && typeof URL.createObjectURL === 'function') {
+      url = URL.createObjectURL(source.file)
+      localPreviewUrls.add(url)
+    }
+    return {
+      id: -(index + 1),
+      kind,
+      status: 'processing',
+      name: source.name,
+      mime: source.file.type,
+      size: source.file.size,
+      width: null,
+      height: null,
+      duration_ms: source.durationMs ?? null,
+      waveform: null,
+      url,
+      thumb_url: null,
+    }
+  }
+
   async function deliver(local: ThreadMessage): Promise<void> {
-    try {
-      receive(await chatsApi.send(local.chat_id, local.body, local.client_id))
-    } catch {
-      const current = thread(local.chat_id).messages.find(
+    // Менять надо реактивную копию из переписки, а не исходный объект
+    const live = (): ThreadMessage | undefined =>
+      thread(local.chat_id).messages.find(
         (message) => message.client_id === local.client_id && message.id === 0,
       )
+
+    try {
+      const uploads = live()?.uploads ?? []
+      for (const [index, upload] of uploads.entries()) {
+        if (upload.attachmentId !== null) {
+          continue
+        }
+        const saved = await uploadAttachment(upload.source.file, upload.source.name, {
+          voice: upload.source.voice,
+          asFile: upload.source.asFile,
+          onProgress: (fraction) => (upload.progress = fraction),
+        })
+        upload.attachmentId = saved.id
+        upload.progress = 1
+        const preview = live()?.attachments[index]?.url
+        if (preview) {
+          previews.value[saved.id] = preview
+        }
+      }
+      receive(
+        await chatsApi.send(
+          local.chat_id,
+          local.body,
+          local.client_id,
+          uploads.map((upload) => upload.attachmentId!),
+        ),
+      )
+    } catch (error) {
+      const current = live()
       if (current !== undefined) {
         current.pending = 'failed'
+        // Сеть и сбои сервера — «повторить»; отказ по существу (места нет, файл велик) — показать текст
+        const explained =
+          error instanceof ApiError &&
+          ((error.status >= 400 && error.status < 500) || error.status === 507)
+        current.error = explained ? error.message : undefined
       }
     }
+  }
+
+  /** Своё фото или видео из памяти браузера, пока сервер его не обработал */
+  function previewOf(attachmentId: number): string | null {
+    return previews.value[attachmentId] ?? null
   }
 
   /**
@@ -394,6 +495,9 @@ export const useChatStore = defineStore('chat', () => {
       case 'chat.read':
         applyRead(message.data)
         return
+      case 'chat.attachment':
+        applyAttachment(message.data)
+        return
       case 'chat.reaction':
         // Пока ждём ответа на свою реакцию, событие может принести состояние до неё
         if (!reactionRequests.has(message.data.message_id)) {
@@ -450,6 +554,18 @@ export const useChatStore = defineStore('chat', () => {
     return true
   }
 
+  function applyAttachment(state: ChatAttachmentState): void {
+    const update = (message: ChatMessage | null | undefined): void => {
+      if (message?.id === state.message_id) {
+        message.attachments = message.attachments.map((attachment) =>
+          attachment.id === state.attachment.id ? state.attachment : attachment,
+        )
+      }
+    }
+    update(threads.value[state.chat_id]?.messages.find((item) => item.id === state.message_id))
+    update(chats.value[state.chat_id]?.last_message)
+  }
+
   function applyRead(state: ChatReadState): void {
     const chat = chats.value[state.chat_id]
     if (chat === undefined) {
@@ -494,6 +610,9 @@ export const useChatStore = defineStore('chat', () => {
     typingTimers.clear()
     typingNotifiedAt.clear()
     typing.value = {}
+    localPreviewUrls.forEach((url) => URL.revokeObjectURL(url))
+    localPreviewUrls.clear()
+    previews.value = {}
   }
 
   return {
@@ -515,6 +634,7 @@ export const useChatStore = defineStore('chat', () => {
     loadOlder,
     send,
     retry,
+    previewOf,
     markRead,
     react,
     notifyTyping,

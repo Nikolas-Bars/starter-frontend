@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import { useChatStore } from '@/stores/chat'
 import type { Chat } from '@/types/api'
+import { messagePreview } from '@/utils/chatAttachment'
 import { callSummary, isMissedCall } from '@/utils/chatCall'
 import { formatChatTime } from '@/utils/format'
 
@@ -74,7 +75,7 @@ const lastCall = computed(() => {
           </template>
           <template v-else-if="lastMessage">
             <span v-if="mine" class="item__you">Вы:</span>
-            {{ lastMessage.body }}
+            {{ messagePreview(lastMessage) }}
           </template>
           <template v-else>Нет сообщений</template>
         </span>

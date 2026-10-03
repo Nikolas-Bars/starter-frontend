@@ -42,7 +42,42 @@ export interface ChatMessage {
   call: ChatMessageCall | null
   /** В порядке, в каком реакции впервые появились */
   reactions: ChatReaction[]
+  /** Файлы сообщения; тогда body — необязательная подпись */
+  attachments: ChatAttachment[]
   created_at: string | null
+}
+
+export type ChatAttachmentKind = 'image' | 'video' | 'voice' | 'file'
+
+/**
+ * Файл в сообщении: POST /api/attachments. Ссылки относительные и подписанные,
+ * действуют до конца следующих суток (UTC)
+ */
+export interface ChatAttachment {
+  id: number
+  kind: ChatAttachmentKind
+  /** processing — ещё сжимается, готовый придёт событием chat.attachment */
+  status: 'processing' | 'ready' | 'failed'
+  /** Имя у отправителя */
+  name: string
+  mime: string
+  /** Байт */
+  size: number
+  width: number | null
+  height: number | null
+  duration_ms: number | null
+  /** Голосовые: громкость по отрезкам, 0–100 */
+  waveform: number[] | null
+  url: string | null
+  /** Превью фото и кадр видео */
+  thumb_url: string | null
+}
+
+/** Событие chat.attachment: файл в уже отправленном сообщении обработан */
+export interface ChatAttachmentState {
+  chat_id: number
+  message_id: number
+  attachment: ChatAttachment
 }
 
 export interface ChatMessageCall {

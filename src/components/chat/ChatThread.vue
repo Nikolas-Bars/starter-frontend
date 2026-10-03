@@ -11,7 +11,7 @@ import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
-import { useChatStore, type ThreadMessage } from '@/stores/chat'
+import { useChatStore, type OutgoingFile, type ThreadMessage } from '@/stores/chat'
 import { dayKey, formatDay } from '@/utils/format'
 
 /** Ближе к низу, чем на столько пикселей, — считаем, что пользователь читает последние сообщения */
@@ -27,6 +27,9 @@ const callStore = useCallStore()
 const chatStore = useChatStore()
 
 const scroller = ref<HTMLElement | null>(null)
+const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
+/** Над перепиской держат перетаскиваемые файлы: счётчик, потому что dragenter/dragleave приходят и от дочерних элементов */
+const dragDepth = ref(0)
 const atBottom = ref(true)
 
 const chat = computed(() => chatStore.chats[props.chatId])
@@ -116,9 +119,33 @@ function markReadOnInteraction(): void {
   }
 }
 
-function send(text: string): void {
-  if (chatStore.send(props.chatId, text)) {
+function send(text: string, files: OutgoingFile[]): void {
+  if (chatStore.send(props.chatId, text, files)) {
     atBottom.value = true
+  }
+}
+
+function hasFiles(event: DragEvent): boolean {
+  return event.dataTransfer?.types.includes('Files') ?? false
+}
+
+function onDragEnter(event: DragEvent): void {
+  if (hasFiles(event) && peer.value) {
+    dragDepth.value += 1
+  }
+}
+
+function onDragLeave(event: DragEvent): void {
+  if (hasFiles(event) && dragDepth.value > 0) {
+    dragDepth.value -= 1
+  }
+}
+
+function onDrop(event: DragEvent): void {
+  dragDepth.value = 0
+  const files = [...(event.dataTransfer?.files ?? [])]
+  if (files.length > 0) {
+    composer.value?.addFiles(files)
   }
 }
 
@@ -174,7 +201,14 @@ onBeforeUnmount(() => {
     :aria-label="peer ? `Переписка с ${peer.name}` : 'Переписка'"
     @pointerdown="markReadOnInteraction"
     @keydown="markReadOnInteraction"
+    @dragenter.prevent="onDragEnter"
+    @dragover.prevent
+    @dragleave="onDragLeave"
+    @drop.prevent="onDrop"
   >
+    <div v-if="dragDepth > 0" class="thread__drop" aria-hidden="true">
+      Отпустите, чтобы прикрепить
+    </div>
     <header class="thread__header">
       <RouterLink class="thread__back" :to="{ name: 'chats' }" aria-label="К списку чатов">
         <BaseIcon name="arrow-left" />
@@ -249,6 +283,7 @@ onBeforeUnmount(() => {
 
     <ChatComposer
       v-if="peer"
+      ref="composer"
       :chat-id="chatId"
       @send="send"
       @typing="chatStore.notifyTyping(chatId)"
@@ -258,10 +293,26 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .thread {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+.thread__drop {
+  position: absolute;
+  inset: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--color-primary);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  color: var(--color-primary);
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .thread__header {
