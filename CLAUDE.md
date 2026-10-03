@@ -1,7 +1,9 @@
-# Starter Web
+# Kolyansburg Web
 
-Vue 3 + Vite + TypeScript SPA for the Starter API (`../starter-backend`). Router, Pinia, Vitest,
-oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
+Vue 3 + Vite + TypeScript SPA of Kolyansburg, a family messenger (https://call-yansburg.com), for the API in
+`../starter-backend`. Router, Pinia, Vitest, oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
+The product name is in `index.html` `<title>`; icons are `public/favicon.svg` (the source mark),
+`favicon.ico` and `apple-touch-icon.png`.
 
 ## Conventions
 
@@ -52,6 +54,14 @@ oxlint + ESLint, Prettier (no semicolons, single quotes, width 100).
   clicking one calls back. Typing: the composer calls `chatStore.notifyTyping()` (sent over the call
   socket at most every `TYPING_NOTIFY_INTERVAL_MS`); incoming `chat.typing` shows «печатает…» in the
   header and the list for `TYPING_VISIBLE_MS` or until that user's message arrives.
+- Attachments: `ChatComposer` collects files (paperclip, paste; `ChatThread` handles drag and drop via
+  `composer.addFiles`), records voice with `MediaRecorder` and emits `send(text, files)`.
+  `chatStore.send()` puts the optimistic message up at once with local previews (`URL.createObjectURL`),
+  then uploads each file through `api/attachments.ts` (`XMLHttpRequest` for progress; `as_file` skips
+  compression) and sends `attachment_ids`; on retry already uploaded files are reused. Media arrives as
+  `status: 'processing'` and is replaced by the `chat.attachment` event. `ChatAttachments` renders the media
+  grid, files and `ChatVoicePlayer`; `utils/chatAttachment.ts` has kinds, sizes and list previews. File URLs
+  from the API are relative and signed — resolve them with `apiUrl()` from `api/http.ts`, never add the token.
 - In Docker on macOS Vite sometimes misses a file change even with polling; if the served code
   is stale, `docker compose restart web`.
 - Styling via CSS variables from `src/assets/main.css`; no hard-coded colors in components.
