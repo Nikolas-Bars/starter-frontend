@@ -20,6 +20,11 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 const baseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '')
 
+/** Полный адрес для относительной ссылки от API (например, url вложения: /api/files/…) */
+export function apiUrl(path: string): string {
+  return `${baseUrl}${path}`
+}
+
 /**
  * Запрос к API: подставляет Bearer-токен и разворачивает ответ до поля data.
  * Любой ответ не из диапазона 2xx превращается в ApiError с текстом от бэкенда.

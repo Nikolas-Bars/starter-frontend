@@ -1,4 +1,11 @@
-import type { Call, CallStatus, ChatMessage, ChatReactionState, ChatReadState } from '@/types/api'
+import type {
+  Call,
+  CallStatus,
+  ChatAttachmentState,
+  ChatMessage,
+  ChatReactionState,
+  ChatReadState,
+} from '@/types/api'
 
 /**
  * Протокол сигнализации с WebSocket-сервером бэкенда (app/Modules/Call/WebSockets/MessageRouter.php).
@@ -39,6 +46,7 @@ export type ServerMessage =
   | { type: 'chat.message'; data: { message: ChatMessage } }
   | { type: 'chat.read'; data: ChatReadState }
   | { type: 'chat.reaction'; data: ChatReactionState }
+  | { type: 'chat.attachment'; data: ChatAttachmentState }
   /** Собеседник набирает сообщение; сервер пересылает это сразу и нигде не хранит */
   | { type: 'chat.typing'; data: { chat_id: number; user_id: number } }
   /** Папки изменились в другой вкладке: перечитать */

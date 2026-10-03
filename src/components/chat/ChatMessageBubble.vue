@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
+import ChatAttachments from '@/components/chat/ChatAttachments.vue'
 import BaseIcon, { type IconName } from '@/components/ui/BaseIcon.vue'
 import { REACTIONS, type ThreadMessage } from '@/stores/chat'
 import { callTitle, isMissedCall } from '@/utils/chatCall'
@@ -54,6 +55,13 @@ const status = computed<{ icon: IconName; label: string } | null>(() => {
 })
 
 const canReact = computed(() => props.message.id > 0)
+
+const attachments = computed(() => props.message.attachments ?? [])
+/** Вложения удалили, чтобы освободить место (attachments:prune), а подписи не было */
+const removed = computed(
+  () =>
+    props.message.type === 'text' && props.message.body === '' && attachments.value.length === 0,
+)
 
 const myReaction = computed(
   () =>
@@ -116,7 +124,15 @@ onBeforeUnmount(() => (pickerOpen.value = false))
             }}</span>
           </span>
         </button>
-        <p v-else class="bubble__body">{{ message.body }}</p>
+        <template v-else>
+          <ChatAttachments
+            v-if="attachments.length > 0"
+            :attachments="attachments"
+            :uploads="message.uploads"
+          />
+          <p v-if="message.body !== ''" class="bubble__body">{{ message.body }}</p>
+          <p v-else-if="removed" class="bubble__body bubble__body--removed">Файл удалён</p>
+        </template>
         <div v-if="message.reactions.length > 0" class="bubble__reactions">
           <button
             v-for="group in message.reactions"
@@ -180,7 +196,7 @@ onBeforeUnmount(() => (pickerOpen.value = false))
       class="message__retry"
       @click="emit('retry')"
     >
-      Не отправлено — повторить
+      {{ message.error ? `${message.error} Повторить` : 'Не отправлено — повторить' }}
     </button>
   </div>
 </template>
@@ -231,6 +247,11 @@ onBeforeUnmount(() => (pickerOpen.value = false))
   margin: 0;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.bubble__body--removed {
+  font-style: italic;
+  opacity: 0.7;
 }
 
 .call-note {

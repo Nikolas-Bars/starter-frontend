@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 
+import { ApiError } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
 import { TYPING_NOTIFY_INTERVAL_MS, TYPING_VISIBLE_MS, useChatStore } from '@/stores/chat'
 import type { ThreadMessage } from '@/stores/chat'
 import type {
   Chat,
+  ChatAttachment,
   ChatMessage,
   ChatMessagesPage,
   ChatReadState,
@@ -35,13 +37,33 @@ const api = vi.hoisted(() => ({
   show: vi.fn<(chatId: number) => Promise<Chat>>(),
   openDirect: vi.fn<(userId: number) => Promise<Chat>>(),
   messages: vi.fn<(chatId: number, beforeId?: number) => Promise<ChatMessagesPage>>(),
-  send: vi.fn<(chatId: number, body: string, clientId: string) => Promise<ChatMessage>>(),
+  send: vi.fn<
+    (
+      chatId: number,
+      body: string,
+      clientId: string,
+      attachmentIds?: number[],
+    ) => Promise<ChatMessage>
+  >(),
   markRead: vi.fn<(chatId: number, messageId: number) => Promise<ChatReadState>>(),
   react: vi.fn<(chatId: number, messageId: number, emoji: string) => Promise<ChatMessage>>(),
   unreact: vi.fn<(chatId: number, messageId: number) => Promise<ChatMessage>>(),
 }))
 
 vi.mock('@/api/chats', () => ({ chatsApi: api }))
+
+const uploads = vi.hoisted(() => ({
+  upload:
+    vi.fn<
+      (
+        file: Blob,
+        name: string,
+        options: { voice?: boolean; asFile?: boolean; onProgress?: (fraction: number) => void },
+      ) => Promise<ChatAttachment>
+    >(),
+}))
+
+vi.mock('@/api/attachments', () => ({ uploadAttachment: uploads.upload }))
 
 const me: User = {
   id: 1,
@@ -65,7 +87,26 @@ function message(id: number, userId: number, overrides: Partial<ChatMessage> = {
     body: `Сообщение ${id}`,
     call: null,
     reactions: [],
+    attachments: [],
     created_at: '2026-10-02T10:00:00+00:00',
+    ...overrides,
+  }
+}
+
+function attachment(id: number, overrides: Partial<ChatAttachment> = {}): ChatAttachment {
+  return {
+    id,
+    kind: 'image',
+    status: 'processing',
+    name: `photo-${id}.jpg`,
+    mime: 'image/jpeg',
+    size: 1000,
+    width: null,
+    height: null,
+    duration_ms: null,
+    waveform: null,
+    url: null,
+    thumb_url: null,
     ...overrides,
   }
 }
@@ -113,6 +154,8 @@ describe('useChatStore', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     localStorage.clear()
+    URL.createObjectURL = vi.fn<(object: Blob) => string>(() => 'blob:preview')
+    URL.revokeObjectURL = vi.fn<(url: string) => void>()
   })
 
   it('показывает своё сообщение сразу и заменяет его сохранённым', async () => {
@@ -124,7 +167,7 @@ describe('useChatStore', () => {
 
     const pending = lastMessage(store)
     expect(pending).toMatchObject({ id: 0, body: 'Привет!', pending: 'sending', user_id: 1 })
-    expect(api.send).toHaveBeenCalledWith(7, 'Привет!', pending.client_id)
+    expect(api.send).toHaveBeenCalledWith(7, 'Привет!', pending.client_id, [])
 
     resolve(message(11, 1, { client_id: pending.client_id, body: 'Привет!' }))
     await flushPromises()
@@ -149,7 +192,7 @@ describe('useChatStore', () => {
     store.retry(7, failed.client_id)
     await flushPromises()
 
-    expect(api.send).toHaveBeenLastCalledWith(7, 'Ау', failed.client_id)
+    expect(api.send).toHaveBeenLastCalledWith(7, 'Ау', failed.client_id, [])
     expect(lastMessage(store)).toMatchObject({ id: 11, body: 'Ау' })
   })
 
@@ -299,5 +342,99 @@ describe('useChatStore', () => {
     emit({ type: 'chat.typing', data: { chat_id: 7, user_id: 1 } })
     expect(store.isTyping(7)).toBe(false)
     vi.useRealTimers()
+  })
+
+  it('загружает файлы по очереди с прогрессом и отправляет их id', async () => {
+    const store = await setup()
+    const photo = new File(['x'], 'море.jpg', { type: 'image/jpeg' })
+    const voice = new Blob(['y'], { type: 'audio/webm' })
+    uploads.upload
+      .mockImplementationOnce(async (_file, _name, options) => {
+        options.onProgress?.(0.5)
+        expect(lastMessage(store).uploads![0]!.progress).toBe(0.5)
+        return attachment(31)
+      })
+      .mockResolvedValueOnce(attachment(32, { kind: 'voice' }))
+    api.send.mockImplementationOnce(async (_chatId, body, clientId, ids) =>
+      message(11, 1, {
+        body,
+        client_id: clientId,
+        attachments: (ids ?? []).map((id) => attachment(id)),
+      }),
+    )
+
+    expect(
+      store.send(7, '', [
+        { file: photo, name: 'море.jpg' },
+        { file: voice, name: 'voice.webm', voice: true, durationMs: 1500 },
+      ]),
+    ).toBe(true)
+
+    const pending = lastMessage(store)
+    expect(pending.attachments.map((item) => item.kind)).toEqual(['image', 'voice'])
+    expect(pending.attachments[1]!.duration_ms).toBe(1500)
+
+    await flushPromises()
+
+    expect(uploads.upload).toHaveBeenNthCalledWith(
+      1,
+      photo,
+      'море.jpg',
+      expect.objectContaining({}),
+    )
+    expect(uploads.upload).toHaveBeenNthCalledWith(
+      2,
+      voice,
+      'voice.webm',
+      expect.objectContaining({ voice: true }),
+    )
+    expect(api.send).toHaveBeenCalledWith(7, '', pending.client_id, [31, 32])
+    expect(lastMessage(store).id).toBe(11)
+    expect(lastMessage(store).pending).toBeUndefined()
+  })
+
+  it('при повторе не загружает заново то, что уже на сервере', async () => {
+    const store = await setup()
+    uploads.upload
+      .mockResolvedValueOnce(attachment(31))
+      .mockRejectedValueOnce(new ApiError('Место для файлов закончилось. Попробуйте позже.', 507))
+
+    store.send(7, 'Смотри', [
+      { file: new File(['a'], 'a.jpg', { type: 'image/jpeg' }), name: 'a.jpg' },
+      { file: new File(['b'], 'b.pdf', { type: 'application/pdf' }), name: 'b.pdf' },
+    ])
+    await flushPromises()
+
+    const failed = lastMessage(store)
+    expect(failed.pending).toBe('failed')
+    expect(failed.error).toBe('Место для файлов закончилось. Попробуйте позже.')
+    expect(api.send).not.toHaveBeenCalled()
+
+    uploads.upload.mockResolvedValueOnce(attachment(32, { kind: 'file' }))
+    api.send.mockResolvedValueOnce(message(11, 1, { client_id: failed.client_id }))
+    store.retry(7, failed.client_id)
+    await flushPromises()
+
+    expect(uploads.upload).toHaveBeenCalledTimes(3)
+    expect(api.send).toHaveBeenCalledWith(7, 'Смотри', failed.client_id, [31, 32])
+  })
+
+  it('подставляет обработанный файл из события chat.attachment', async () => {
+    const store = await setup()
+    emit({
+      type: 'chat.message',
+      data: { message: message(12, 2, { body: '', attachments: [attachment(40)] }) },
+    })
+
+    const ready = attachment(40, {
+      status: 'ready',
+      url: '/api/files/a.jpg',
+      width: 800,
+      height: 600,
+    })
+    emit({ type: 'chat.attachment', data: { chat_id: 7, message_id: 12, attachment: ready } })
+
+    expect(lastMessage(store).attachments[0]).toEqual(ready)
+    expect(store.chats[7]!.last_message?.attachments[0]).toEqual(ready)
   })
 })

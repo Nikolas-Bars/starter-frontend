@@ -21,9 +21,13 @@ export const chatsApi = {
     http.get<ChatMessagesPage>(
       `chats/${chatId}/messages${beforeId === undefined ? '' : `?before_id=${beforeId}`}`,
     ),
-  /** Повтор с тем же clientId не создаёт дубль */
-  send: (chatId: number, body: string, clientId: string) =>
-    http.post<ChatMessage>(`chats/${chatId}/messages`, { body, client_id: clientId }),
+  /** Повтор с тем же clientId не создаёт дубль; attachmentIds — заранее загруженные файлы */
+  send: (chatId: number, body: string, clientId: string, attachmentIds: number[] = []) =>
+    http.post<ChatMessage>(`chats/${chatId}/messages`, {
+      body,
+      client_id: clientId,
+      ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
+    }),
   markRead: (chatId: number, messageId: number) =>
     http.post<ChatReadState>(`chats/${chatId}/read`, { message_id: messageId }),
   /** Своя реакция на сообщение: новая заменяет прежнюю */

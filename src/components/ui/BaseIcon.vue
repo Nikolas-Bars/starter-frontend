@@ -79,6 +79,19 @@ const PATHS = {
     'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
     'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6',
   ],
+  paperclip: [
+    'M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48',
+  ],
+  image: [
+    'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+    'M8.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z',
+    'M21 15l-5-5L5 21',
+  ],
+  file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
+  play: ['M6 4l14 8-14 8z'],
+  pause: ['M7 4h3v16H7zM14 4h3v16h-3z'],
+  download: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M7 10l5 5 5-5', 'M12 15V3'],
+  stop: ['M6 6h12v12H6z'],
 } satisfies Record<string, string[]>
 
 export type IconName = keyof typeof PATHS

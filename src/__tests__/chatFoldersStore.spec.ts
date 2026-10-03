@@ -56,6 +56,7 @@ function lastMessage(chatId: number, id: number): ChatMessage {
     body: 'Привет',
     call: null,
     reactions: [],
+    attachments: [],
     created_at: null,
   }
 }
