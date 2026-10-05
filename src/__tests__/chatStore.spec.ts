@@ -4,7 +4,12 @@ import { createPinia, setActivePinia } from 'pinia'
 
 import { ApiError } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
-import { TYPING_NOTIFY_INTERVAL_MS, TYPING_VISIBLE_MS, useChatStore } from '@/stores/chat'
+import {
+  canEditMessage,
+  TYPING_NOTIFY_INTERVAL_MS,
+  TYPING_VISIBLE_MS,
+  useChatStore,
+} from '@/stores/chat'
 import type { ThreadMessage } from '@/stores/chat'
 import type {
   Chat,
@@ -50,6 +55,7 @@ const api = vi.hoisted(() => ({
   unreact: vi.fn<(chatId: number, messageId: number) => Promise<ChatMessage>>(),
   remove: vi.fn<(chatId: number, messageId: number) => Promise<null>>(),
   forward: vi.fn<(chatId: number, messageId: number, clientId: string) => Promise<ChatMessage>>(),
+  edit: vi.fn<(chatId: number, messageId: number, body: string) => Promise<ChatMessage>>(),
 }))
 
 vi.mock('@/api/chats', () => ({ chatsApi: api }))
@@ -92,6 +98,7 @@ function message(id: number, userId: number, overrides: Partial<ChatMessage> = {
     forwarded_from: null,
     reactions: [],
     attachments: [],
+    edited_at: null,
     created_at: '2026-10-02T10:00:00+00:00',
     ...overrides,
   }
@@ -486,5 +493,45 @@ describe('useChatStore', () => {
     expect(api.forward).toHaveBeenCalledWith(7, 10, expect.any(String))
     expect(lastMessage(store).forwarded_from).toEqual({ user_id: 2, name: 'Мария' })
     expect(store.chats[7]!.last_message?.id).toBe(11)
+  })
+
+  it('меняет текст сразу и возвращает прежний при ошибке', async () => {
+    const store = await setup()
+    api.edit.mockRejectedValueOnce(new ApiError('Уже ответили', 409))
+
+    const editing = store.editMessage(7, 9, '  Новое  ')
+    expect(store.threads[7]!.messages[0]!.body).toBe('Новое')
+    await expect(editing).rejects.toThrow('Уже ответили')
+    expect(store.threads[7]!.messages[0]).toMatchObject({ body: 'Сообщение 9', edited_at: null })
+
+    api.edit.mockResolvedValueOnce(
+      message(9, 1, { body: 'Новое', edited_at: '2026-10-05T10:00:00+00:00' }),
+    )
+    await store.editMessage(7, 9, 'Новое')
+    expect(api.edit).toHaveBeenLastCalledWith(7, 9, 'Новое')
+    expect(store.threads[7]!.messages[0]!.edited_at).toBe('2026-10-05T10:00:00+00:00')
+  })
+
+  it('по событию изменения обновляет сообщение и последнее в списке', async () => {
+    const store = await setup()
+    const edited = message(10, 2, { body: 'Исправлено', edited_at: '2026-10-05T10:00:00+00:00' })
+
+    emit({ type: 'chat.message_updated', data: { chat_id: 7, message: edited } })
+
+    expect(lastMessage(store).body).toBe('Исправлено')
+    expect(store.chats[7]!.last_message?.body).toBe('Исправлено')
+  })
+
+  it('изменить можно своё сообщение, пока на него не ответили', () => {
+    const mine = message(9, 1)
+    const later = message(11, 1)
+    const thread = [mine, message(10, 2), later]
+
+    expect(canEditMessage(thread, mine, 1)).toBe(false)
+    expect(canEditMessage(thread, later, 1)).toBe(true)
+    expect(canEditMessage(thread, message(10, 2), 1)).toBe(false)
+    expect(
+      canEditMessage([later], { ...later, forwarded_from: { user_id: 2, name: 'Мария' } }, 1),
+    ).toBe(false)
   })
 })

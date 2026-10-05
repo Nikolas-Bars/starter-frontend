@@ -44,7 +44,10 @@ The product name is in `index.html` `<title>`; icons are `public/favicon.svg` (t
   `ChatReactionEnum`). `chatStore.react()` toggles optimistically and rolls back on error; while a
   request for a message is in flight, `chat.reaction` events for it are ignored so a stale echo
   can't undo the newer choice.
-- The ⋯ button on a message opens copy / forward / delete. `chatStore.forward()` posts to
+- Editing: «Изменить» in the ⋯ menu while `canEditMessage()` (own text, not forwarded, nothing from others
+  after it) puts `ChatComposer` into edit mode (`editing` prop; the draft is set aside and restored);
+  `chatStore.editMessage()` is optimistic with rollback, `chat.message_updated` replaces the message.
+- The ⋯ button on a message opens copy / forward / edit / delete. `chatStore.forward()` posts to
   `…/messages/forward` and `ChatForwardDialog` routes to the target chat; forwarded messages show
   «Переслано от …» (`forwarded_from`). `chatStore.deleteMessage()` (own non-call messages, after a
   confirm) and `chat.message_deleted` both go through `applyDeleted`, which also swaps the chat

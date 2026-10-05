@@ -13,6 +13,8 @@ const props = defineProps<{
   /** Собеседник прочитал это сообщение */
   read: boolean
   myId: number | null
+  /** Своё сообщение, на которое ещё не ответили */
+  editable: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +22,7 @@ const emit = defineEmits<{
   react: [emoji: string]
   callBack: []
   forward: []
+  edit: []
   delete: []
 }>()
 
@@ -78,7 +81,9 @@ const canForward = computed(
 const canDelete = computed(
   () => props.mine && props.message.id > 0 && props.message.type === 'text',
 )
-const hasActions = computed(() => canCopy.value || canForward.value || canDelete.value)
+const hasActions = computed(
+  () => canCopy.value || canForward.value || props.editable || canDelete.value,
+)
 
 const myReaction = computed(
   () =>
@@ -102,10 +107,12 @@ async function copy(): Promise<void> {
   await navigator.clipboard?.writeText(props.message.body).catch(() => undefined)
 }
 
-function act(action: 'forward' | 'delete'): void {
+function act(action: 'forward' | 'edit' | 'delete'): void {
   menu.value = null
   if (action === 'forward') {
     emit('forward')
+  } else if (action === 'edit') {
+    emit('edit')
   } else {
     emit('delete')
   }
@@ -191,6 +198,7 @@ onBeforeUnmount(() => (menu.value = null))
           </button>
         </div>
         <span class="bubble__meta">
+          <span v-if="message.edited_at" class="bubble__edited">изменено</span>
           <time v-if="message.created_at" :datetime="message.created_at">
             {{ formatTime(message.created_at) }}
           </time>
@@ -237,6 +245,15 @@ onBeforeUnmount(() => (menu.value = null))
             @click="act('forward')"
           >
             <BaseIcon name="forward" /> Переслать
+          </button>
+          <button
+            v-if="editable"
+            type="button"
+            role="menuitem"
+            class="actions__item"
+            @click="act('edit')"
+          >
+            <BaseIcon name="edit" /> Изменить
           </button>
           <button
             v-if="canDelete"
@@ -443,6 +460,10 @@ onBeforeUnmount(() => (menu.value = null))
 
 .bubble__status {
   display: inline-flex;
+}
+
+.bubble__edited {
+  font-style: italic;
 }
 
 .bubble__icon {

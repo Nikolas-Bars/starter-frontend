@@ -21,9 +21,18 @@ const VOICE_TYPES = [
   { mime: 'audio/ogg;codecs=opus', extension: 'ogg' },
 ]
 
-const props = defineProps<{ chatId: number }>()
+const props = defineProps<{
+  chatId: number
+  /** Редактируемое своё сообщение: поле ввода показывает его текст вместо черновика */
+  editing: { id: number; body: string } | null
+}>()
 
-const emit = defineEmits<{ send: [text: string, files: OutgoingFile[]]; typing: [] }>()
+const emit = defineEmits<{
+  send: [text: string, files: OutgoingFile[]]
+  typing: []
+  edit: [text: string]
+  cancelEdit: []
+}>()
 
 /** Черновики живут, пока открыта вкладка: переключение между чатами их не теряет */
 const drafts = new Map<number, string>()
@@ -53,7 +62,14 @@ let sendRecording = false
 const hasMedia = computed(() =>
   selected.value.some(({ file }) => ['image', 'video'].includes(guessKind(file))),
 )
-const canSend = computed(() => text.value.trim() !== '' || selected.value.length > 0)
+const canSend = computed(() =>
+  props.editing !== null
+    ? text.value.trim() !== ''
+    : text.value.trim() !== '' || selected.value.length > 0,
+)
+
+/** Черновик, отложенный на время редактирования, и чат, к которому он относится */
+let editOrigin: { chatId: number; draft: string } | null = null
 const canRecord = computed(
   () => typeof MediaRecorder !== 'undefined' && navigator.mediaDevices?.getUserMedia !== undefined,
 )
@@ -62,7 +78,12 @@ watch(
   () => props.chatId,
   (chatId, previous) => {
     if (previous !== undefined) {
-      drafts.set(previous, text.value)
+      if (editOrigin?.chatId === previous) {
+        drafts.set(previous, editOrigin.draft)
+        editOrigin = null
+      } else {
+        drafts.set(previous, text.value)
+      }
     }
     text.value = drafts.get(chatId) ?? ''
     clearFiles()
@@ -73,6 +94,23 @@ watch(
     })
   },
   { immediate: true },
+)
+
+watch(
+  () => props.editing,
+  (editing) => {
+    if (editing !== null) {
+      editOrigin ??= { chatId: props.chatId, draft: text.value }
+      text.value = editing.body
+    } else if (editOrigin !== null) {
+      text.value = editOrigin.draft
+      editOrigin = null
+    }
+    void nextTick(() => {
+      resize()
+      field.value?.focus({ preventScroll: true })
+    })
+  },
 )
 
 function resize(): void {
@@ -138,6 +176,10 @@ function submit(): void {
   if (!canSend.value) {
     return
   }
+  if (props.editing !== null) {
+    emit('edit', text.value)
+    return
+  }
   const files: OutgoingFile[] = selected.value.map(({ file }) => ({
     file,
     name: file.name,
@@ -152,12 +194,17 @@ function submit(): void {
 
 function onInput(): void {
   resize()
-  if (text.value.trim() !== '') {
+  if (text.value.trim() !== '' && props.editing === null) {
     emit('typing')
   }
 }
 
 function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && props.editing !== null) {
+    event.preventDefault()
+    emit('cancelEdit')
+    return
+  }
   // Enter отправляет, Shift+Enter — новая строка; во время набора иероглифов Enter подтверждает ввод
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
     event.preventDefault()
@@ -233,7 +280,23 @@ defineExpose({ addFiles })
 
 <template>
   <div class="composer-wrap">
-    <div v-if="selected.length > 0" class="tray">
+    <div v-if="editing" class="editing">
+      <BaseIcon name="edit" class="editing__icon" />
+      <span class="editing__text">
+        <span class="editing__title">Редактирование</span>
+        <span class="editing__body">{{ editing.body }}</span>
+      </span>
+      <button
+        type="button"
+        class="editing__close"
+        aria-label="Отменить редактирование"
+        title="Отменить (Esc)"
+        @click="emit('cancelEdit')"
+      >
+        <BaseIcon name="close" />
+      </button>
+    </div>
+    <div v-else-if="selected.length > 0" class="tray">
       <div class="tray__items">
         <div v-for="(item, index) in selected" :key="index" class="tray__item">
           <img v-if="item.preview" class="tray__thumb" :src="item.preview" alt="" />
@@ -285,6 +348,7 @@ defineExpose({ addFiles })
 
     <form v-else class="composer" @submit.prevent="submit">
       <button
+        v-if="!editing"
         type="button"
         class="composer__icon"
         aria-label="Прикрепить файл"
@@ -300,14 +364,24 @@ defineExpose({ addFiles })
         class="composer__input"
         rows="1"
         :maxlength="MAX_MESSAGE_LENGTH"
-        :placeholder="selected.length > 0 ? 'Подпись' : 'Сообщение'"
+        :placeholder="selected.length > 0 && !editing ? 'Подпись' : 'Сообщение'"
         aria-label="Текст сообщения"
         @input="onInput"
         @keydown="onKeydown"
         @paste="onPaste"
       />
       <button
-        v-if="canSend || !canRecord"
+        v-if="editing"
+        type="submit"
+        class="composer__send"
+        :disabled="!canSend"
+        aria-label="Сохранить"
+        title="Сохранить (Enter)"
+      >
+        <BaseIcon name="check" />
+      </button>
+      <button
+        v-else-if="canSend || !canRecord"
         type="submit"
         class="composer__send"
         :disabled="!canSend"
@@ -437,6 +511,61 @@ defineExpose({ addFiles })
 
 .tray {
   padding: 0.75rem 1rem 0;
+}
+
+.editing {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0;
+}
+
+.editing__icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-size: 1.25rem;
+}
+
+.editing__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-primary);
+}
+
+.editing__title {
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.editing__body {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editing__close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.editing__close:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
 }
 
 .tray__items {

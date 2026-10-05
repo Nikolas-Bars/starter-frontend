@@ -13,7 +13,7 @@ import FormAlert from '@/components/ui/FormAlert.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import { ApiError } from '@/api/http'
-import { useChatStore, type OutgoingFile, type ThreadMessage } from '@/stores/chat'
+import { canEditMessage, useChatStore, type OutgoingFile, type ThreadMessage } from '@/stores/chat'
 import { dayKey, formatDay } from '@/utils/format'
 
 /** Ближе к низу, чем на столько пикселей, — считаем, что пользователь читает последние сообщения */
@@ -35,6 +35,8 @@ const dragDepth = ref(0)
 const atBottom = ref(true)
 /** Какое сообщение пересылаем: открывает диалог выбора чата */
 const forwarding = ref<number | null>(null)
+/** Какое сообщение редактируем в поле ввода */
+const editing = ref<{ id: number; body: string } | null>(null)
 const actionError = ref('')
 
 const chat = computed(() => chatStore.chats[props.chatId])
@@ -166,6 +168,25 @@ async function deleteMessage(message: ThreadMessage): Promise<void> {
   }
 }
 
+function startEdit(message: ThreadMessage): void {
+  actionError.value = ''
+  editing.value = { id: message.id, body: message.body }
+}
+
+async function saveEdit(text: string): Promise<void> {
+  const target = editing.value
+  if (target === null) {
+    return
+  }
+  editing.value = null
+  actionError.value = ''
+  try {
+    await chatStore.editMessage(props.chatId, target.id, text)
+  } catch (error) {
+    actionError.value = error instanceof ApiError ? error.message : 'Не удалось изменить сообщение.'
+  }
+}
+
 function callBack(): void {
   if (peer.value !== null && canCall.value) {
     void callStore.startCall(peer.value, { video: false })
@@ -176,6 +197,7 @@ watch(
   () => props.chatId,
   async (chatId) => {
     chatStore.setActive(chatId)
+    editing.value = null
     atBottom.value = true
     await chatStore.ensureChat(chatId)
     await chatStore.loadThread(chatId)
@@ -290,10 +312,12 @@ onBeforeUnmount(() => {
             :mine="isMine(message)"
             :read="isRead(message)"
             :my-id="auth.user?.id ?? null"
+            :editable="canEditMessage(messages, message, auth.user?.id ?? null)"
             @retry="chatStore.retry(chatId, message.client_id)"
             @react="(emoji) => chatStore.react(chatId, message.id, emoji)"
             @call-back="callBack"
             @forward="forwarding = message.id"
+            @edit="startEdit(message)"
             @delete="deleteMessage(message)"
           />
         </template>
@@ -307,8 +331,11 @@ onBeforeUnmount(() => {
       v-if="peer"
       ref="composer"
       :chat-id="chatId"
+      :editing="editing"
       @send="send"
       @typing="chatStore.notifyTyping(chatId)"
+      @edit="saveEdit"
+      @cancel-edit="editing = null"
     />
   </section>
 </template>

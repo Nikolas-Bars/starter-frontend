@@ -57,6 +57,7 @@ function lastMessage(chatId: number, id: number): ChatMessage {
     body: 'Привет',
     call: null,
     forwarded_from: null,
+    edited_at: null,
     reactions: [],
     attachments: [],
     created_at: null,
