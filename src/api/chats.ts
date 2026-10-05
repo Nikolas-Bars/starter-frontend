@@ -28,6 +28,15 @@ export const chatsApi = {
       client_id: clientId,
       ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
     }),
+  /** Своё сообщение — у всех, вместе с файлами */
+  remove: (chatId: number, messageId: number) =>
+    http.delete<null>(`chats/${chatId}/messages/${messageId}`),
+  /** Копия сообщения из любого своего чата в chatId; повтор с тем же clientId не создаёт дубль */
+  forward: (chatId: number, messageId: number, clientId: string) =>
+    http.post<ChatMessage>(`chats/${chatId}/messages/forward`, {
+      message_id: messageId,
+      client_id: clientId,
+    }),
   markRead: (chatId: number, messageId: number) =>
     http.post<ChatReadState>(`chats/${chatId}/read`, { message_id: messageId }),
   /** Своя реакция на сообщение: новая заменяет прежнюю */

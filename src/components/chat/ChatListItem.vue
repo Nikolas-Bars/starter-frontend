@@ -46,7 +46,7 @@ const lastCall = computed(() => {
     :to="{ name: 'chat', params: { id: chat.id } }"
     :aria-current="active ? 'page' : undefined"
   >
-    <BaseAvatar :name="name" :online="online" />
+    <BaseAvatar :name="name" :src="chat.peer?.avatar_url" :online="online" />
     <span class="item__body">
       <span class="item__top">
         <span class="item__name">{{ name }}</span>

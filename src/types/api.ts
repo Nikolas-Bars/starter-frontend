@@ -12,8 +12,10 @@ export type ValidationErrors = Record<string, string[]>
 export interface User {
   id: number
   name: string
-  /** Ник без @, по нему (и по email целиком) пользователя находят в поиске */
+  /** Ник без @, только по нему пользователя находят в поиске */
   username: string | null
+  /** Подписанная относительная ссылка на аватарку (/api/files/…), null — показываем инициалы */
+  avatar_url: string | null
   /** Только у текущего пользователя (вход, профиль), у остальных null */
   email: string | null
   email_verified_at: string | null
@@ -39,6 +41,8 @@ export interface ChatMessage {
   /** call — служебное сообщение о звонке (автор — звонивший), body у него пустой */
   type: 'text' | 'call'
   body: string
+  /** Пересланное: автор оригинала (имя на момент пересылки; user_id пуст, если автора удалили) */
+  forwarded_from: { user_id: number | null; name: string } | null
   call: ChatMessageCall | null
   /** В порядке, в каком реакции впервые появились */
   reactions: ChatReaction[]
@@ -98,6 +102,17 @@ export interface ChatReactionState {
   chat_id: number
   message_id: number
   reactions: ChatReaction[]
+}
+
+/** Событие chat.message_deleted: автор удалил сообщение у всех */
+export interface ChatMessageDeletedState {
+  chat_id: number
+  message_id: number
+  /** Автор удалённого сообщения */
+  user_id: number
+  /** Удалили последнее сообщение чата: тогда last_message — новое последнее (null — сообщений не осталось) */
+  last_changed: boolean
+  last_message: ChatMessage | null
 }
 
 /** Папка чатов: GET /api/chat-folders. Видна только владельцу */
@@ -208,6 +223,8 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   name: string
+  /** Обязателен: латиница, цифры и _, 3–32 символа (регистр и ведущий @ сервер убирает) */
+  username: string
   email: string
   password: string
   password_confirmation: string

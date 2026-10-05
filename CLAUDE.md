@@ -33,7 +33,7 @@ The product name is in `index.html` `<title>`; icons are `public/favicon.svg` (t
   `useCallAttention()` (blinking tab title, missed-call badge, system notification in background).
   User preferences (silent ringtone, chosen devices) are persisted by `useCallSettingsStore`.
 - Messenger: the home route `/` (and `/chats/:id`) is `ChatsView` — `ChatSidebar` (chat list +
-  user search by name/email/`@username`) and `ChatThread`. `useChatStore` owns chats and threads;
+  user search by `@username` only) and `ChatThread`. `useChatStore` owns chats and threads;
   it reuses the call socket via `callStore.onServerMessage()` (`chat.message`, `chat.read`, reload
   on `ready`). Sends are optimistic: a pending message (`id: 0`, `pending`) keyed by a UUID
   `client_id` that the backend dedupes, so retries are safe. Read state is a per-member cursor
@@ -44,6 +44,13 @@ The product name is in `index.html` `<title>`; icons are `public/favicon.svg` (t
   `ChatReactionEnum`). `chatStore.react()` toggles optimistically and rolls back on error; while a
   request for a message is in flight, `chat.reaction` events for it are ignored so a stale echo
   can't undo the newer choice.
+- The ⋯ button on a message opens copy / forward / delete. `chatStore.forward()` posts to
+  `…/messages/forward` and `ChatForwardDialog` routes to the target chat; forwarded messages show
+  «Переслано от …» (`forwarded_from`). `chatStore.deleteMessage()` (own non-call messages, after a
+  confirm) and `chat.message_deleted` both go through `applyDeleted`, which also swaps the chat
+  preview for `last_message`.
+- Avatars: `ProfileView` uploads/removes via `usersApi.updateAvatar/deleteAvatar` (FormData);
+  `BaseAvatar` shows `avatar_url` and falls back to initials.
 - Folders (`useChatFoldersStore`) are private to the user: tabs above the list, the folder menu
   in the thread header, the manager `<dialog>` (`managerOpen`). A folder tab pages through
   `GET chats?folder_id=` into the shared `chatStore.chats`; the unread badge is counted locally

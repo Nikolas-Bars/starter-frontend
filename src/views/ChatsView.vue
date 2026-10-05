@@ -48,7 +48,7 @@ onMounted(() => {
       />
       <div v-else class="messenger__placeholder">
         <BaseIcon name="chat" class="messenger__placeholder-icon" />
-        <p>Выберите чат или найдите собеседника по имени, email или нику</p>
+        <p>Выберите чат или найдите собеседника по нику</p>
       </div>
     </div>
   </section>

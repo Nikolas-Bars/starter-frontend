@@ -116,8 +116,8 @@ async function openChat(user: User): Promise<void> {
         v-model="search"
         class="sidebar__search-input"
         type="search"
-        placeholder="Имя, email или @ник"
-        aria-label="Найти пользователя по имени, email или нику"
+        placeholder="Поиск по @нику"
+        aria-label="Найти пользователя по нику"
         autocomplete="off"
       />
     </label>
@@ -135,7 +135,11 @@ async function openChat(user: User): Promise<void> {
               :disabled="opening !== null"
               @click="openChat(user)"
             >
-              <BaseAvatar :name="user.name" :online="callStore.isUserOnline(user.id)" />
+              <BaseAvatar
+                :name="user.name"
+                :src="user.avatar_url"
+                :online="callStore.isUserOnline(user.id)"
+              />
               <span class="sidebar__user-info">
                 <span class="sidebar__user-name">{{ user.name }}</span>
                 <span v-if="user.username" class="sidebar__user-meta">@{{ user.username }}</span>
@@ -162,7 +166,7 @@ async function openChat(user: User): Promise<void> {
           </template>
         </p>
         <p v-else-if="chatStore.listLoaded" class="sidebar__empty">
-          Переписок пока нет. Найдите собеседника по имени, email или нику.
+          Переписок пока нет. Найдите собеседника по нику.
         </p>
         <BaseButton
           v-if="folderStore.hasMoreChats"

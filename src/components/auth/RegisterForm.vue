@@ -14,6 +14,7 @@ const { loading, message, fieldError, submit } = useFormSubmit()
 
 const form = reactive({
   name: '',
+  username: '',
   email: '',
   password: '',
   password_confirmation: '',
@@ -37,6 +38,18 @@ async function onSubmit(): Promise<void> {
       required
       :error="fieldError('name')"
     />
+    <BaseInput
+      v-model="form.username"
+      label="Ник"
+      autocomplete="username"
+      autocapitalize="none"
+      spellcheck="false"
+      required
+      :error="fieldError('username')"
+    />
+    <p class="auth-form__hint">
+      По нику вас найдут в поиске: латиница, цифры и _, от 3 до 32 символов.
+    </p>
     <BaseInput
       v-model="form.email"
       label="Email"

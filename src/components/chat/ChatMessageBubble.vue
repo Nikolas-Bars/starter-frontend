@@ -15,9 +15,17 @@ const props = defineProps<{
   myId: number | null
 }>()
 
-const emit = defineEmits<{ retry: []; react: [emoji: string]; callBack: [] }>()
+const emit = defineEmits<{
+  retry: []
+  react: [emoji: string]
+  callBack: []
+  forward: []
+  delete: []
+}>()
 
-const pickerOpen = ref(false)
+/** Открытое меню: реакции или действия с сообщением */
+const menu = ref<'react' | 'actions' | null>(null)
+const pickerOpen = computed(() => menu.value === 'react')
 const root = ref<HTMLElement | null>(null)
 
 const callNote = computed<{
@@ -63,6 +71,15 @@ const removed = computed(
     props.message.type === 'text' && props.message.body === '' && attachments.value.length === 0,
 )
 
+const canCopy = computed(() => props.message.body !== '')
+const canForward = computed(
+  () => props.message.id > 0 && props.message.type === 'text' && !removed.value,
+)
+const canDelete = computed(
+  () => props.mine && props.message.id > 0 && props.message.type === 'text',
+)
+const hasActions = computed(() => canCopy.value || canForward.value || canDelete.value)
+
 const myReaction = computed(
   () =>
     props.message.reactions.find(
@@ -71,23 +88,42 @@ const myReaction = computed(
 )
 
 function react(emoji: string): void {
-  pickerOpen.value = false
+  menu.value = null
   emit('react', emoji)
+}
+
+function toggle(which: 'react' | 'actions'): void {
+  menu.value = menu.value === which ? null : which
+}
+
+async function copy(): Promise<void> {
+  menu.value = null
+  // Браузер может не дать доступ к буферу (нет HTTPS, запрет) — тогда текст можно выделить вручную
+  await navigator.clipboard?.writeText(props.message.body).catch(() => undefined)
+}
+
+function act(action: 'forward' | 'delete'): void {
+  menu.value = null
+  if (action === 'forward') {
+    emit('forward')
+  } else {
+    emit('delete')
+  }
 }
 
 function onDocumentPointer(event: PointerEvent): void {
   if (root.value !== null && !root.value.contains(event.target as Node)) {
-    pickerOpen.value = false
+    menu.value = null
   }
 }
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
-    pickerOpen.value = false
+    menu.value = null
   }
 }
 
-watch(pickerOpen, (open) => {
+watch(menu, (open) => {
   if (open) {
     document.addEventListener('pointerdown', onDocumentPointer)
     document.addEventListener('keydown', onKeydown)
@@ -97,7 +133,7 @@ watch(pickerOpen, (open) => {
   }
 })
 
-onBeforeUnmount(() => (pickerOpen.value = false))
+onBeforeUnmount(() => (menu.value = null))
 </script>
 
 <template>
@@ -125,6 +161,10 @@ onBeforeUnmount(() => (pickerOpen.value = false))
           </span>
         </button>
         <template v-else>
+          <p v-if="message.forwarded_from" class="bubble__forwarded">
+            <BaseIcon name="forward" class="bubble__icon" />
+            Переслано от {{ message.forwarded_from.name }}
+          </p>
           <ChatAttachments
             v-if="attachments.length > 0"
             :attachments="attachments"
@@ -169,10 +209,45 @@ onBeforeUnmount(() => (pickerOpen.value = false))
           aria-label="Поставить реакцию"
           title="Реакция"
           :aria-expanded="pickerOpen"
-          @click="pickerOpen = !pickerOpen"
+          @click="toggle('react')"
         >
           <BaseIcon name="smile" />
         </button>
+        <button
+          v-if="hasActions"
+          type="button"
+          class="message__react-trigger"
+          :class="{ 'message__react-trigger--open': menu === 'actions' }"
+          aria-label="Действия с сообщением"
+          title="Ещё"
+          :aria-expanded="menu === 'actions'"
+          @click="toggle('actions')"
+        >
+          <BaseIcon name="more" />
+        </button>
+        <div v-if="menu === 'actions'" class="actions" role="menu" aria-label="Действия">
+          <button v-if="canCopy" type="button" role="menuitem" class="actions__item" @click="copy">
+            <BaseIcon name="copy" /> Копировать текст
+          </button>
+          <button
+            v-if="canForward"
+            type="button"
+            role="menuitem"
+            class="actions__item"
+            @click="act('forward')"
+          >
+            <BaseIcon name="forward" /> Переслать
+          </button>
+          <button
+            v-if="canDelete"
+            type="button"
+            role="menuitem"
+            class="actions__item actions__item--danger"
+            @click="act('delete')"
+          >
+            <BaseIcon name="trash" /> Удалить у всех
+          </button>
+        </div>
         <div v-if="pickerOpen" class="picker" role="menu" aria-label="Реакции">
           <button
             v-for="emoji in REACTIONS"
@@ -376,7 +451,66 @@ onBeforeUnmount(() => (pickerOpen.value = false))
 }
 
 .message__react {
+  display: flex;
   flex-shrink: 0;
+}
+
+.message--mine .message__react {
+  flex-direction: row-reverse;
+}
+
+.bubble__forwarded {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.actions {
+  position: absolute;
+  bottom: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+}
+
+.message--mine .actions {
+  right: 0;
+  left: auto;
+}
+
+.actions__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  border-radius: calc(var(--radius) - 0.25rem);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.actions__item:hover,
+.actions__item:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+.actions__item--danger {
+  color: var(--color-danger-text);
 }
 
 .message__react-trigger {

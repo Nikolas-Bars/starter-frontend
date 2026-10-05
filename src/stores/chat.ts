@@ -11,6 +11,7 @@ import type {
   ChatAttachment,
   ChatAttachmentState,
   ChatMessage,
+  ChatMessageDeletedState,
   ChatReaction,
   ChatReactionState,
   ChatReadState,
@@ -258,6 +259,7 @@ export const useChatStore = defineStore('chat', () => {
       type: 'text',
       body,
       call: null,
+      forwarded_from: null,
       reactions: [],
       attachments: files.map(localAttachment),
       uploads: files.map((source) => ({ source, progress: 0, attachmentId: null })),
@@ -459,6 +461,55 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /** Удаляет своё сообщение у всех. Убираем сразу, при ошибке возвращаем и бросаем её дальше */
+  async function deleteMessage(chatId: number, messageId: number): Promise<void> {
+    const current = threads.value[chatId]
+    const message = current?.messages.find((item) => item.id === messageId)
+    if (current === undefined || message === undefined || messageId === 0) {
+      return
+    }
+    current.messages = current.messages.filter((item) => item.id !== messageId)
+    try {
+      await chatsApi.remove(chatId, messageId)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return
+      }
+      current.messages = merge(current.messages, [message])
+      throw error
+    }
+  }
+
+  /** Пересылает сообщение в чат targetChatId; новое сообщение придёт в переписку как обычное */
+  async function forward(targetChatId: number, messageId: number): Promise<void> {
+    const message = await chatsApi.forward(targetChatId, messageId, clientId())
+    if (chats.value[targetChatId] === undefined) {
+      await ensureChat(targetChatId)
+    }
+    receive(message)
+  }
+
+  function applyDeleted(state: ChatMessageDeletedState): void {
+    const current = threads.value[state.chat_id]
+    if (current !== undefined) {
+      current.messages = current.messages.filter((item) => item.id !== state.message_id)
+    }
+    const chat = chats.value[state.chat_id]
+    if (chat === undefined) {
+      return
+    }
+    if (state.last_changed) {
+      chat.last_message = state.last_message
+    }
+    if (
+      state.user_id !== myId() &&
+      state.message_id > chat.last_read_message_id &&
+      chat.unread_count > 0
+    ) {
+      chat.unread_count -= 1
+    }
+  }
+
   function applyReactions(state: ChatReactionState): void {
     const message = threads.value[state.chat_id]?.messages.find(
       (item) => item.id === state.message_id,
@@ -503,6 +554,9 @@ export const useChatStore = defineStore('chat', () => {
         if (!reactionRequests.has(message.data.message_id)) {
           applyReactions(message.data)
         }
+        return
+      case 'chat.message_deleted':
+        applyDeleted(message.data)
         return
       case 'chat.typing':
         if (message.data.user_id !== myId()) {
@@ -591,7 +645,13 @@ export const useChatStore = defineStore('chat', () => {
     }
     try {
       const page = await chatsApi.messages(chatId)
-      current.messages = merge(current.messages, page.items)
+      // Сообщения из того же диапазона, которых больше нет на сервере, удалили, пока не было связи
+      const ids = new Set(page.items.map((item) => item.id))
+      const oldest = Math.min(...ids)
+      const kept = current.messages.filter(
+        (item) => item.id === 0 || item.id < oldest || ids.has(item.id),
+      )
+      current.messages = merge(kept, page.items)
     } catch {
       // Покажем то, что есть; следующее событие или переоткрытие чата догрузят остальное
     }
@@ -637,6 +697,8 @@ export const useChatStore = defineStore('chat', () => {
     previewOf,
     markRead,
     react,
+    deleteMessage,
+    forward,
     notifyTyping,
     isTyping,
     setActive,

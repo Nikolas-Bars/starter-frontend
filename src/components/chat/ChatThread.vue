@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 
 import ChatComposer from '@/components/chat/ChatComposer.vue'
 import ChatFolderMenu from '@/components/chat/ChatFolderMenu.vue'
+import ChatForwardDialog from '@/components/chat/ChatForwardDialog.vue'
 import ChatMessageBubble from '@/components/chat/ChatMessageBubble.vue'
 import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -11,6 +12,7 @@ import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
+import { ApiError } from '@/api/http'
 import { useChatStore, type OutgoingFile, type ThreadMessage } from '@/stores/chat'
 import { dayKey, formatDay } from '@/utils/format'
 
@@ -31,6 +33,9 @@ const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 /** Над перепиской держат перетаскиваемые файлы: счётчик, потому что dragenter/dragleave приходят и от дочерних элементов */
 const dragDepth = ref(0)
 const atBottom = ref(true)
+/** Какое сообщение пересылаем: открывает диалог выбора чата */
+const forwarding = ref<number | null>(null)
+const actionError = ref('')
 
 const chat = computed(() => chatStore.chats[props.chatId])
 const thread = computed(() => chatStore.threads[props.chatId])
@@ -149,6 +154,18 @@ function onDrop(event: DragEvent): void {
   }
 }
 
+async function deleteMessage(message: ThreadMessage): Promise<void> {
+  if (!window.confirm('Удалить сообщение у всех? Его файлы тоже удалятся.')) {
+    return
+  }
+  actionError.value = ''
+  try {
+    await chatStore.deleteMessage(props.chatId, message.id)
+  } catch (error) {
+    actionError.value = error instanceof ApiError ? error.message : 'Не удалось удалить сообщение.'
+  }
+}
+
 function callBack(): void {
   if (peer.value !== null && canCall.value) {
     void callStore.startCall(peer.value, { video: false })
@@ -214,7 +231,7 @@ onBeforeUnmount(() => {
         <BaseIcon name="arrow-left" />
       </RouterLink>
       <template v-if="peer">
-        <BaseAvatar :name="peer.name" :online="peerOnline" />
+        <BaseAvatar :name="peer.name" :src="peer.avatar_url" :online="peerOnline" />
         <div class="thread__who">
           <span class="thread__name">{{ peer.name }}</span>
           <span
@@ -276,10 +293,15 @@ onBeforeUnmount(() => {
             @retry="chatStore.retry(chatId, message.client_id)"
             @react="(emoji) => chatStore.react(chatId, message.id, emoji)"
             @call-back="callBack"
+            @forward="forwarding = message.id"
+            @delete="deleteMessage(message)"
           />
         </template>
       </div>
     </div>
+
+    <FormAlert v-if="actionError" :message="actionError" />
+    <ChatForwardDialog :message-id="forwarding" @close="forwarding = null" />
 
     <ChatComposer
       v-if="peer"

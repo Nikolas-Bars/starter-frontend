@@ -77,14 +77,7 @@ async function rotate(): Promise<void> {
     <FormAlert :message="error" />
 
     <template v-if="link">
-      <input
-        class="call-link__url"
-        type="text"
-        readonly
-        :value="url"
-        aria-label="Ссылка для звонка"
-        @focus="($event.target as HTMLInputElement).select()"
-      />
+      <p class="call-link__url" tabindex="0" aria-label="Ссылка для звонка">{{ url }}</p>
       <div class="call-link__actions">
         <BaseButton v-if="canShare" icon="share" @click="share()">Поделиться</BaseButton>
         <BaseButton :variant="canShare ? 'ghost' : 'primary'" icon="copy" @click="copy()">
@@ -122,6 +115,9 @@ async function rotate(): Promise<void> {
 
 .call-link__url {
   width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: all;
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);

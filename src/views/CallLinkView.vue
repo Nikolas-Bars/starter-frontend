@@ -36,6 +36,7 @@ const owner = computed<User | null>(() =>
     : {
         ...invite.value.owner,
         username: null,
+        avatar_url: null,
         email: '',
         email_verified_at: null,
         created_at: null,

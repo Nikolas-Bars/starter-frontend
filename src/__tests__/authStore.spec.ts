@@ -34,7 +34,13 @@ describe('auth store', () => {
     const auth = useAuthStore()
 
     const error = await auth
-      .register({ name: 'Иван', email: 'a@b.c', password: 'x', password_confirmation: 'x' })
+      .register({
+        name: 'Иван',
+        username: 'ivan',
+        email: 'a@b.c',
+        password: 'x',
+        password_confirmation: 'x',
+      })
       .catch((e: unknown) => e)
 
     expect(error).toBeInstanceOf(ApiError)
