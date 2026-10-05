@@ -48,6 +48,8 @@ export type ServerMessage =
   | { type: 'chat.read'; data: ChatReadState }
   | { type: 'chat.reaction'; data: ChatReactionState }
   | { type: 'chat.message_deleted'; data: ChatMessageDeletedState }
+  /** Автор изменил текст: сообщение целиком */
+  | { type: 'chat.message_updated'; data: { chat_id: number; message: ChatMessage } }
   | { type: 'chat.attachment'; data: ChatAttachmentState }
   /** Собеседник набирает сообщение; сервер пересылает это сразу и нигде не хранит */
   | { type: 'chat.typing'; data: { chat_id: number; user_id: number } }

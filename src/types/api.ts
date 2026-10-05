@@ -48,6 +48,8 @@ export interface ChatMessage {
   reactions: ChatReaction[]
   /** Файлы сообщения; тогда body — необязательная подпись */
   attachments: ChatAttachment[]
+  /** Автор менял текст; null — не менял */
+  edited_at: string | null
   created_at: string | null
 }
 

@@ -73,6 +73,27 @@ export interface Thread {
   error: string
 }
 
+/**
+ * Своё текстовое сообщение (не пересланное) можно изменить, пока на него не ответили:
+ * после него в переписке нет ничего от других участников
+ */
+export function canEditMessage(
+  messages: ThreadMessage[],
+  message: ThreadMessage,
+  myId: number | null,
+): boolean {
+  if (
+    message.user_id !== myId ||
+    message.id === 0 ||
+    message.type !== 'text' ||
+    message.forwarded_from !== null ||
+    (message.body === '' && message.attachments.length === 0)
+  ) {
+    return false
+  }
+  return !messages.some((item) => item.id > message.id && item.user_id !== myId)
+}
+
 function clientId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`.replace('.', '')
 }
@@ -260,6 +281,7 @@ export const useChatStore = defineStore('chat', () => {
       body,
       call: null,
       forwarded_from: null,
+      edited_at: null,
       reactions: [],
       attachments: files.map(localAttachment),
       uploads: files.map((source) => ({ source, progress: 0, attachmentId: null })),
@@ -480,6 +502,35 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /** Меняет текст своего сообщения. Показываем сразу, при ошибке возвращаем прежний и бросаем её дальше */
+  async function editMessage(chatId: number, messageId: number, body: string): Promise<void> {
+    const message = threads.value[chatId]?.messages.find((item) => item.id === messageId)
+    const text = body.trim()
+    if (message === undefined || messageId === 0 || text === '' || text === message.body) {
+      return
+    }
+    const previous = { body: message.body, edited_at: message.edited_at }
+    message.body = text
+    message.edited_at = new Date().toISOString()
+    try {
+      applyUpdated(await chatsApi.edit(chatId, messageId, text))
+    } catch (error) {
+      Object.assign(message, previous)
+      throw error
+    }
+  }
+
+  function applyUpdated(message: ChatMessage): void {
+    const current = threads.value[message.chat_id]
+    if (current !== undefined) {
+      current.messages = current.messages.map((item) => (item.id === message.id ? message : item))
+    }
+    const chat = chats.value[message.chat_id]
+    if (chat?.last_message?.id === message.id) {
+      chat.last_message = message
+    }
+  }
+
   /** Пересылает сообщение в чат targetChatId; новое сообщение придёт в переписку как обычное */
   async function forward(targetChatId: number, messageId: number): Promise<void> {
     const message = await chatsApi.forward(targetChatId, messageId, clientId())
@@ -557,6 +608,9 @@ export const useChatStore = defineStore('chat', () => {
         return
       case 'chat.message_deleted':
         applyDeleted(message.data)
+        return
+      case 'chat.message_updated':
+        applyUpdated(message.data.message)
         return
       case 'chat.typing':
         if (message.data.user_id !== myId()) {
@@ -698,6 +752,7 @@ export const useChatStore = defineStore('chat', () => {
     markRead,
     react,
     deleteMessage,
+    editMessage,
     forward,
     notifyTyping,
     isTyping,

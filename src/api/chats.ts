@@ -28,6 +28,9 @@ export const chatsApi = {
       client_id: clientId,
       ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
     }),
+  /** Новый текст своего сообщения, пока на него не ответили (иначе 409) */
+  edit: (chatId: number, messageId: number, body: string) =>
+    http.patch<ChatMessage>(`chats/${chatId}/messages/${messageId}`, { body }),
   /** Своё сообщение — у всех, вместе с файлами */
   remove: (chatId: number, messageId: number) =>
     http.delete<null>(`chats/${chatId}/messages/${messageId}`),
