@@ -3,6 +3,7 @@ import type {
   CallStatus,
   ChatAttachmentState,
   ChatMessage,
+  ChatMessageDeletedState,
   ChatReactionState,
   ChatReadState,
 } from '@/types/api'
@@ -46,6 +47,7 @@ export type ServerMessage =
   | { type: 'chat.message'; data: { message: ChatMessage } }
   | { type: 'chat.read'; data: ChatReadState }
   | { type: 'chat.reaction'; data: ChatReactionState }
+  | { type: 'chat.message_deleted'; data: ChatMessageDeletedState }
   | { type: 'chat.attachment'; data: ChatAttachmentState }
   /** Собеседник набирает сообщение; сервер пересылает это сразу и нигде не хранит */
   | { type: 'chat.typing'; data: { chat_id: number; user_id: number } }

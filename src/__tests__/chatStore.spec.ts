@@ -48,6 +48,8 @@ const api = vi.hoisted(() => ({
   markRead: vi.fn<(chatId: number, messageId: number) => Promise<ChatReadState>>(),
   react: vi.fn<(chatId: number, messageId: number, emoji: string) => Promise<ChatMessage>>(),
   unreact: vi.fn<(chatId: number, messageId: number) => Promise<ChatMessage>>(),
+  remove: vi.fn<(chatId: number, messageId: number) => Promise<null>>(),
+  forward: vi.fn<(chatId: number, messageId: number, clientId: string) => Promise<ChatMessage>>(),
 }))
 
 vi.mock('@/api/chats', () => ({ chatsApi: api }))
@@ -69,6 +71,7 @@ const me: User = {
   id: 1,
   name: 'Иван',
   username: 'ivan',
+  avatar_url: null,
   email: 'ivan@example.com',
   email_verified_at: null,
   created_at: null,
@@ -86,6 +89,7 @@ function message(id: number, userId: number, overrides: Partial<ChatMessage> = {
     type: 'text',
     body: `Сообщение ${id}`,
     call: null,
+    forwarded_from: null,
     reactions: [],
     attachments: [],
     created_at: '2026-10-02T10:00:00+00:00',
@@ -436,5 +440,51 @@ describe('useChatStore', () => {
 
     expect(lastMessage(store).attachments[0]).toEqual(ready)
     expect(store.chats[7]!.last_message?.attachments[0]).toEqual(ready)
+  })
+
+  it('удаляет своё сообщение сразу и возвращает его при ошибке', async () => {
+    const store = await setup()
+    api.remove.mockRejectedValueOnce(new ApiError('Нет связи', 0))
+
+    const deleting = store.deleteMessage(7, 9)
+    expect(store.threads[7]!.messages.map((item) => item.id)).toEqual([10])
+    await expect(deleting).rejects.toThrow('Нет связи')
+    expect(store.threads[7]!.messages.map((item) => item.id)).toEqual([9, 10])
+
+    api.remove.mockResolvedValueOnce(null)
+    await store.deleteMessage(7, 9)
+    expect(api.remove).toHaveBeenLastCalledWith(7, 9)
+    expect(store.threads[7]!.messages.map((item) => item.id)).toEqual([10])
+  })
+
+  it('по событию удаления убирает сообщение, меняет последнее и счётчик непрочитанных', async () => {
+    const store = await setup()
+
+    emit({
+      type: 'chat.message_deleted',
+      data: {
+        chat_id: 7,
+        message_id: 10,
+        user_id: 2,
+        last_changed: true,
+        last_message: message(9, 1),
+      },
+    })
+
+    expect(store.threads[7]!.messages.map((item) => item.id)).toEqual([9])
+    expect(store.chats[7]!.last_message?.id).toBe(9)
+    expect(store.chats[7]!.unread_count).toBe(0)
+  })
+
+  it('пересланное сообщение попадает в переписку чата-получателя', async () => {
+    const store = await setup()
+    const forwarded = message(11, 1, { forwarded_from: { user_id: 2, name: 'Мария' } })
+    api.forward.mockResolvedValueOnce(forwarded)
+
+    await store.forward(7, 10)
+
+    expect(api.forward).toHaveBeenCalledWith(7, 10, expect.any(String))
+    expect(lastMessage(store).forwarded_from).toEqual({ user_id: 2, name: 'Мария' })
+    expect(store.chats[7]!.last_message?.id).toBe(11)
   })
 })

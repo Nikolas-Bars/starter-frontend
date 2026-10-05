@@ -2,7 +2,9 @@
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 
+import { ApiError } from '@/api/http'
 import { usersApi } from '@/api/users'
+import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
@@ -10,6 +12,7 @@ import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types/api'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -19,6 +22,39 @@ const name = ref(auth.user?.name ?? '')
 const username = ref(auth.user?.username ?? '')
 const saved = ref(false)
 const loggingOut = ref(false)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarBusy = ref(false)
+const avatarError = ref('')
+
+async function changeAvatar(task: () => Promise<User>): Promise<void> {
+  avatarBusy.value = true
+  avatarError.value = ''
+  try {
+    auth.setUser(await task())
+  } catch (error) {
+    avatarError.value =
+      error instanceof ApiError
+        ? (Object.values(error.errors)[0]?.[0] ?? error.message)
+        : 'Не удалось обновить аватарку.'
+  } finally {
+    avatarBusy.value = false
+  }
+}
+
+function onAvatarPicked(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file !== undefined) {
+    void changeAvatar(() => usersApi.updateAvatar(file))
+  }
+}
+
+function removeAvatar(): void {
+  if (window.confirm('Убрать аватарку?')) {
+    void changeAvatar(() => usersApi.deleteAvatar())
+  }
+}
 
 async function save(): Promise<void> {
   saved.value = false
@@ -43,6 +79,35 @@ async function logout(): Promise<void> {
 
 <template>
   <BaseCard title="Профиль" :subtitle="auth.user?.email ?? undefined">
+    <div class="profile__avatar">
+      <BaseAvatar :name="auth.user?.name ?? ''" :src="auth.user?.avatar_url" size="xl" />
+      <div class="profile__avatar-actions">
+        <BaseButton
+          variant="ghost"
+          icon="image"
+          :loading="avatarBusy"
+          @click="avatarInput?.click()"
+        >
+          {{ auth.user?.avatar_url ? 'Сменить фото' : 'Поставить фото' }}
+        </BaseButton>
+        <BaseButton
+          v-if="auth.user?.avatar_url"
+          variant="ghost"
+          :disabled="avatarBusy"
+          @click="removeAvatar"
+        >
+          Убрать
+        </BaseButton>
+      </div>
+      <input
+        ref="avatarInput"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
+        hidden
+        @change="onAvatarPicked"
+      />
+      <FormAlert :message="avatarError" />
+    </div>
     <form class="profile" novalidate @submit.prevent="save">
       <BaseInput
         v-model="name"
@@ -82,6 +147,24 @@ async function logout(): Promise<void> {
 </template>
 
 <style scoped>
+.profile__avatar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.profile__avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.profile__avatar :deep(.alert) {
+  flex-basis: 100%;
+}
+
 .profile {
   display: flex;
   flex-direction: column;

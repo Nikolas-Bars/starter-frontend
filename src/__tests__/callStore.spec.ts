@@ -151,6 +151,7 @@ const me: User = {
   id: 1,
   name: 'Иван',
   username: null,
+  avatar_url: null,
   email: 'ivan@example.com',
   email_verified_at: null,
   created_at: null,

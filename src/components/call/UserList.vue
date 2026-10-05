@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
   <section class="users">
     <h2 class="users__title">Пользователи</h2>
 
-    <BaseInput v-model="search" label="Поиск по имени, нику или email" />
+    <BaseInput v-model="search" label="Поиск по нику" />
 
     <FormAlert :message="error" />
 

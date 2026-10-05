@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+
+import { apiUrl } from '@/api/http'
 
 const props = withDefaults(
   defineProps<{
     name: string
+    /** Ссылка на аватарку от API; null — инициалы */
+    src?: string | null
     /** undefined — статус не показываем */
     online?: boolean
-    size?: 'md' | 'lg'
+    size?: 'md' | 'lg' | 'xl'
   }>(),
-  { online: undefined, size: 'md' },
+  { online: undefined, size: 'md', src: null },
+)
+
+const failed = ref(false)
+watch(
+  () => props.src,
+  () => (failed.value = false),
 )
 
 const initials = computed(() =>
@@ -23,7 +33,14 @@ const initials = computed(() =>
 
 <template>
   <span class="avatar" :class="`avatar--${size}`" aria-hidden="true">
-    {{ initials || '?' }}
+    <img
+      v-if="src && !failed"
+      class="avatar__image"
+      :src="apiUrl(src)"
+      alt=""
+      @error="failed = true"
+    />
+    <template v-else>{{ initials || '?' }}</template>
     <span
       v-if="online !== undefined"
       class="avatar__presence"
@@ -49,10 +66,23 @@ const initials = computed(() =>
   user-select: none;
 }
 
+.avatar__image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .avatar--lg {
   width: 4rem;
   height: 4rem;
   font-size: 1.375rem;
+}
+
+.avatar--xl {
+  width: 6rem;
+  height: 6rem;
+  font-size: 2rem;
 }
 
 .avatar__presence {

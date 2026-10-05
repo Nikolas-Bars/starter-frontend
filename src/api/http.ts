@@ -35,7 +35,9 @@ export async function request<T>(method: HttpMethod, path: string, body?: unknow
     'Accept-Language': 'ru',
   }
 
-  if (body !== undefined) {
+  // Для FormData границу multipart подставит сам браузер
+  const form = body instanceof FormData
+  if (body !== undefined && !form) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -49,7 +51,7 @@ export async function request<T>(method: HttpMethod, path: string, body?: unknow
     response = await fetch(`${baseUrl}/api/${path.replace(/^\/+/, '')}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     })
   } catch {
     throw new ApiError('Сервер недоступен. Проверьте, что бэкенд запущен.', 0)
