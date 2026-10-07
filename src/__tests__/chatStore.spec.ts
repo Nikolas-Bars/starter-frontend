@@ -56,6 +56,7 @@ const api = vi.hoisted(() => ({
   remove: vi.fn<(chatId: number, messageId: number) => Promise<null>>(),
   forward: vi.fn<(chatId: number, messageId: number, clientId: string) => Promise<ChatMessage>>(),
   edit: vi.fn<(chatId: number, messageId: number, body: string) => Promise<ChatMessage>>(),
+  setTranslationNote: vi.fn<(chatId: number, note: string | null) => Promise<Chat>>(),
 }))
 
 vi.mock('@/api/chats', () => ({ chatsApi: api }))
@@ -95,6 +96,8 @@ function message(id: number, userId: number, overrides: Partial<ChatMessage> = {
     client_id: `client-${id}`,
     type: 'text',
     body: `Сообщение ${id}`,
+    body_locale: null,
+    translations: {},
     call: null,
     forwarded_from: null,
     reactions: [],
@@ -132,6 +135,7 @@ function chat(overrides: Partial<Chat> = {}): Chat {
     unread_count: 1,
     last_read_message_id: 9,
     peer_last_read_message_id: 0,
+    translation_note: null,
     created_at: null,
     ...overrides,
   }
@@ -521,6 +525,42 @@ describe('useChatStore', () => {
 
     expect(lastMessage(store).body).toBe('Исправлено')
     expect(store.chats[7]!.last_message?.body).toBe('Исправлено')
+  })
+
+  it('по событию перевода показывает перевод в переписке и в списке', async () => {
+    const store = await setup()
+
+    emit({
+      type: 'chat.message_translated',
+      data: { chat_id: 7, message_id: 10, body_locale: 'vi', translations: { ru: 'Привет' } },
+    })
+
+    expect(lastMessage(store)).toMatchObject({ body_locale: 'vi', translations: { ru: 'Привет' } })
+    expect(store.chats[7]!.last_message?.translations).toEqual({ ru: 'Привет' })
+  })
+
+  it('правка сразу убирает перевод старого текста', async () => {
+    const store = await setup()
+    const own = store.threads[7]!.messages[0]!
+    Object.assign(own, { body_locale: 'ru', translations: { vi: 'Tin nhắn' } })
+    api.edit.mockReturnValueOnce(new Promise(() => undefined))
+
+    void store.editMessage(7, 9, 'Новое')
+
+    expect(store.threads[7]!.messages[0]).toMatchObject({ body_locale: null, translations: {} })
+  })
+
+  it('заметку для перевода сохраняет на сервере и меняет по событию', async () => {
+    const store = await setup()
+    api.setTranslationNote.mockResolvedValueOnce(chat({ translation_note: 'Бабушка и внук' }))
+
+    await store.setTranslationNote(7, '  Бабушка и внук  ')
+
+    expect(api.setTranslationNote).toHaveBeenCalledWith(7, 'Бабушка и внук')
+    expect(store.chats[7]!.translation_note).toBe('Бабушка и внук')
+
+    emit({ type: 'chat.translation_note', data: { chat_id: 7, translation_note: null } })
+    expect(store.chats[7]!.translation_note).toBeNull()
   })
 
   it('изменить можно своё сообщение, пока на него не ответили', () => {

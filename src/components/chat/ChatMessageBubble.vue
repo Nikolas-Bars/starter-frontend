@@ -5,6 +5,7 @@ import ChatAttachments from '@/components/chat/ChatAttachments.vue'
 import BaseIcon, { type IconName } from '@/components/ui/BaseIcon.vue'
 import { REACTIONS, type ThreadMessage } from '@/stores/chat'
 import { callTitle, isMissedCall } from '@/utils/chatCall'
+import { translatedBody } from '@/utils/chatTranslation'
 import { formatDuration, formatTime } from '@/utils/format'
 
 const props = defineProps<{
@@ -74,6 +75,13 @@ const removed = computed(
     props.message.type === 'text' && props.message.body === '' && attachments.value.length === 0,
 )
 
+/** Перевод на язык интерфейса; вместо оригинала, пока не попросили показать его */
+const translation = computed(() => translatedBody(props.message))
+const showOriginal = ref(false)
+const text = computed(() =>
+  translation.value === null || showOriginal.value ? props.message.body : translation.value,
+)
+
 const canCopy = computed(() => props.message.body !== '')
 const canForward = computed(
   () => props.message.id > 0 && props.message.type === 'text' && !removed.value,
@@ -104,7 +112,7 @@ function toggle(which: 'react' | 'actions'): void {
 async function copy(): Promise<void> {
   menu.value = null
   // Браузер может не дать доступ к буферу (нет HTTPS, запрет) — тогда текст можно выделить вручную
-  await navigator.clipboard?.writeText(props.message.body).catch(() => undefined)
+  await navigator.clipboard?.writeText(text.value).catch(() => undefined)
 }
 
 function act(action: 'forward' | 'edit' | 'delete'): void {
@@ -177,8 +185,18 @@ onBeforeUnmount(() => (menu.value = null))
             :attachments="attachments"
             :uploads="message.uploads"
           />
-          <p v-if="message.body !== ''" class="bubble__body">{{ message.body }}</p>
+          <p v-if="message.body !== ''" class="bubble__body">{{ text }}</p>
           <p v-else-if="removed" class="bubble__body bubble__body--removed">Файл удалён</p>
+          <button
+            v-if="translation !== null"
+            type="button"
+            class="bubble__translation"
+            :aria-pressed="showOriginal"
+            @click="showOriginal = !showOriginal"
+          >
+            <BaseIcon name="globe" class="bubble__icon" />
+            {{ showOriginal ? 'Показать перевод' : 'Переведено · показать оригинал' }}
+          </button>
         </template>
         <div v-if="message.reactions.length > 0" class="bubble__reactions">
           <button
@@ -339,6 +357,27 @@ onBeforeUnmount(() => (menu.value = null))
   margin: 0;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.bubble__translation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.bubble__translation:hover,
+.bubble__translation:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .bubble__body--removed {

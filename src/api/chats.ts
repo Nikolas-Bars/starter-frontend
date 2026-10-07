@@ -47,6 +47,9 @@ export const chatsApi = {
     http.put<ChatMessage>(`chats/${chatId}/messages/${messageId}/reaction`, { emoji }),
   unreact: (chatId: number, messageId: number) =>
     http.delete<ChatMessage>(`chats/${chatId}/messages/${messageId}/reaction`),
+  /** Кто кем друг другу приходится — для автоперевода; null — убрать */
+  setTranslationNote: (chatId: number, note: string | null) =>
+    http.put<Chat>(`chats/${chatId}/translation-note`, { note }),
 }
 
 export const chatFoldersApi = {

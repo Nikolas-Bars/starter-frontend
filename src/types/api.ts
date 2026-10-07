@@ -42,7 +42,16 @@ export interface ChatMessage {
   client_id: string
   /** call — служебное сообщение о звонке (автор — звонивший), body у него пустой */
   type: 'text' | 'call'
+  /** Оригинал, как написал автор */
   body: string
+  /** Язык оригинала по мнению переводчика; null — ещё не переводили */
+  body_locale: string | null
+  /**
+   * Перевод body на языки интерфейса участников (users.locale), кроме языка оригинала.
+   * Пусто — переводить не нужно или перевод придёт событием chat.message_translated.
+   * По WebSocket пустой объект приходит как [] — читать только по ключу
+   */
+  translations: Record<string, string>
   /** Пересланное: автор оригинала (имя на момент пересылки; user_id пуст, если автора удалили) */
   forwarded_from: { user_id: number | null; name: string } | null
   call: ChatMessageCall | null
@@ -139,7 +148,23 @@ export interface Chat {
   last_read_message_id: number
   /** Свои сообщения с id не больше этого собеседник прочитал */
   peer_last_read_message_id: number
+  /** Для автоперевода: кто кем друг другу приходится («бабушка и внук»); общая на чат */
+  translation_note: string | null
   created_at: string | null
+}
+
+/** Событие chat.message_translated: перевод текста готов */
+export interface ChatMessageTranslatedState {
+  chat_id: number
+  message_id: number
+  body_locale: string | null
+  translations: Record<string, string>
+}
+
+/** Событие chat.translation_note: участник изменил заметку для переводчика */
+export interface ChatTranslationNoteState {
+  chat_id: number
+  translation_note: string | null
 }
 
 /** GET /api/chats/{id}/messages: от старых к новым */

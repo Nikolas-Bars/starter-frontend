@@ -6,6 +6,7 @@ import ChatComposer from '@/components/chat/ChatComposer.vue'
 import ChatFolderMenu from '@/components/chat/ChatFolderMenu.vue'
 import ChatForwardDialog from '@/components/chat/ChatForwardDialog.vue'
 import ChatMessageBubble from '@/components/chat/ChatMessageBubble.vue'
+import ChatTranslationNote from '@/components/chat/ChatTranslationNote.vue'
 import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
@@ -14,6 +15,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import { ApiError } from '@/api/http'
 import { canEditMessage, useChatStore, type OutgoingFile, type ThreadMessage } from '@/stores/chat'
+import { locale } from '@/i18n/locale'
 import { dayKey, formatDay } from '@/utils/format'
 
 /** Ближе к низу, чем на столько пикселей, — считаем, что пользователь читает последние сообщения */
@@ -44,6 +46,12 @@ const thread = computed(() => chatStore.threads[props.chatId])
 const messages = computed(() => thread.value?.messages ?? [])
 const peer = computed(() => chat.value?.peer ?? null)
 const peerOnline = computed(() => (peer.value ? callStore.isUserOnline(peer.value.id) : false))
+/** Заметка нужна переводчику, только когда языки разные */
+const showTranslationNote = computed(
+  () =>
+    (peer.value !== null && peer.value.locale !== locale.value) ||
+    (chat.value?.translation_note ?? null) !== null,
+)
 
 const groups = computed(() => {
   const result: { key: string; label: string; messages: ThreadMessage[] }[] = []
@@ -264,6 +272,7 @@ onBeforeUnmount(() => {
           </span>
         </div>
         <div class="thread__actions">
+          <ChatTranslationNote v-if="showTranslationNote" :chat-id="chatId" />
           <ChatFolderMenu :chat-id="chatId" />
           <BaseButton
             variant="ghost"

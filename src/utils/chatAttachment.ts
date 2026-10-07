@@ -1,4 +1,5 @@
 import type { ChatAttachmentKind, ChatMessage } from '@/types/api'
+import { displayBody } from '@/utils/chatTranslation'
 
 /** Совпадает с лимитами бэкенда (config/attachments.php) */
 export const MAX_FILE_BYTES = 50 * 1024 * 1024
@@ -48,12 +49,16 @@ const KIND_LABELS: Record<ChatAttachmentKind, string> = {
 }
 
 /**
- * Превью сообщения в списке чатов: подпись или текст, а без них — что за файлы
+ * Превью сообщения в списке чатов: подпись или текст (переведённый, если есть), а без них — что за файлы
  */
-export function messagePreview(message: Pick<ChatMessage, 'body' | 'attachments'>): string {
+export function messagePreview(
+  message: Pick<ChatMessage, 'body' | 'attachments'> &
+    Partial<Pick<ChatMessage, 'body_locale' | 'translations'>>,
+): string {
   const attachments = message.attachments ?? []
+  const body = displayBody(message)
   if (attachments.length === 0) {
-    return message.body === '' ? 'Файл удалён' : message.body
+    return body === '' ? 'Файл удалён' : body
   }
 
   const first = attachments[0]!
@@ -68,7 +73,7 @@ export function messagePreview(message: Pick<ChatMessage, 'body' | 'attachments'
         : `Файлы: ${attachments.length}`
   }
 
-  return message.body === '' ? label : `${label} · ${message.body}`
+  return body === '' ? label : `${label} · ${body}`
 }
 
 export function attachmentIcon(kind: ChatAttachmentKind): 'image' | 'video' | 'mic' | 'file' {

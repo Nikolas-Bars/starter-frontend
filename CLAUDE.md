@@ -18,6 +18,12 @@ The product name is in `index.html` `<title>`; icons are `public/favicon.svg` (t
   `app.supported_locales`). Before sign-in it comes from localStorage or the browser; after it, from
   the profile (`user.locale`, applied by `useAuthStore`), changed via `usersApi.updateLocale()`.
   `request()` sends it as `Accept-Language`. UI strings are still hard-coded Russian.
+- Auto-translation: a message carries `body` (original), `body_locale` and `translations`
+  (`{locale: text}`, arrives as `[]` over WebSocket when empty). Read what to show only through
+  `src/utils/chatTranslation.ts` (`displayBody` / `translatedBody`, for the current locale); the bubble
+  shows the translation with a "show original" toggle. A translation arrives later as
+  `chat.message_translated`; an edit clears it until a new one comes. The per-chat
+  `translation_note` (who the people are to each other) is edited in `ChatTranslationNote.vue`.
 - No secrets in the frontend: everything `VITE_*` ends up in the public bundle. LLM keys for
   translation live only on the backend.
 - Form submission state goes through `useFormSubmit()`; show `fieldError('field')` under inputs and

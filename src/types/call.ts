@@ -4,8 +4,10 @@ import type {
   ChatAttachmentState,
   ChatMessage,
   ChatMessageDeletedState,
+  ChatMessageTranslatedState,
   ChatReactionState,
   ChatReadState,
+  ChatTranslationNoteState,
 } from '@/types/api'
 
 /**
@@ -51,6 +53,8 @@ export type ServerMessage =
   /** Автор изменил текст: сообщение целиком */
   | { type: 'chat.message_updated'; data: { chat_id: number; message: ChatMessage } }
   | { type: 'chat.attachment'; data: ChatAttachmentState }
+  | { type: 'chat.message_translated'; data: ChatMessageTranslatedState }
+  | { type: 'chat.translation_note'; data: ChatTranslationNoteState }
   /** Собеседник набирает сообщение; сервер пересылает это сразу и нигде не хранит */
   | { type: 'chat.typing'; data: { chat_id: number; user_id: number } }
   /** Папки изменились в другой вкладке: перечитать */
