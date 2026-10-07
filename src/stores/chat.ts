@@ -678,7 +678,7 @@ export const useChatStore = defineStore('chat', () => {
     if (chat === undefined) {
       return
     }
-    if (chat.last_message === null || chat.last_message.id < message.id) {
+    if (chat.last_message === null || chat.last_message.id <= message.id) {
       chat.last_message = message
     }
     if (message.user_id === myId()) {
