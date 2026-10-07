@@ -16,6 +16,8 @@ export interface User {
   username: string | null
   /** Подписанная относительная ссылка на аватарку (/api/files/…), null — показываем инициалы */
   avatar_url: string | null
+  /** Язык интерфейса (app.supported_locales бэкенда); на него переводятся входящие сообщения */
+  locale: string
   /** Только у текущего пользователя (вход, профиль), у остальных null */
   email: string | null
   email_verified_at: string | null

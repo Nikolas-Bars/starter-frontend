@@ -1,5 +1,6 @@
 import type { ApiResponse, ValidationErrors } from '@/types/api'
 import { tokenStorage } from '@/api/tokenStorage'
+import { locale } from '@/i18n/locale'
 
 export class ApiError extends Error {
   constructor(
@@ -32,7 +33,7 @@ export function apiUrl(path: string): string {
 export async function request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'Accept-Language': 'ru',
+    'Accept-Language': locale.value,
   }
 
   // Для FormData границу multipart подставит сам браузер

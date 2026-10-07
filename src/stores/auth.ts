@@ -5,6 +5,7 @@ import { authApi } from '@/api/auth'
 import { callLinksApi } from '@/api/callLinks'
 import { ApiError } from '@/api/http'
 import { tokenStorage } from '@/api/tokenStorage'
+import { isLocale, locale, setLocale } from '@/i18n/locale'
 import type { AuthToken, LoginPayload, RegisterPayload, User } from '@/types/api'
 
 /** По какой ссылке вошёл гость: на чужой ссылке его вход не годится */
@@ -18,10 +19,18 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => token.value !== null)
   const isGuest = computed(() => user.value?.is_guest === true)
 
+  /** Язык интерфейса — из профиля: выбранный на одном устройстве действует на всех */
+  function assignUser(value: User): void {
+    user.value = value
+    if (isLocale(value.locale) && value.locale !== locale.value) {
+      setLocale(value.locale)
+    }
+  }
+
   function applyToken(auth: AuthToken): void {
     tokenStorage.set(auth.access_token)
     token.value = auth.access_token
-    user.value = auth.user
+    assignUser(auth.user)
   }
 
   function reset(): void {
@@ -54,7 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      user.value = await authApi.me()
+      assignUser(await authApi.me())
     } catch (error) {
       if (error instanceof ApiError && error.isUnauthorized) {
         reset()
@@ -64,9 +73,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** Профиль изменили на сервере — показываем новые имя и ник */
+  /** Профиль изменили на сервере — показываем новые имя, ник и язык */
   function setUser(updated: User): void {
-    user.value = updated
+    assignUser(updated)
   }
 
   async function logout(): Promise<void> {

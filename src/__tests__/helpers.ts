@@ -22,6 +22,7 @@ export const authTokenResponse = {
       id: 1,
       name: 'Администратор',
       username: 'admin',
+      locale: 'ru',
       email: 'admin@example.com',
       email_verified_at: null,
       created_at: null,
