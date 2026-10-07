@@ -14,6 +14,12 @@ The product name is in `index.html` `<title>`; icons are `public/favicon.svg` (t
   The backend always answers `{status, message, data, errors}` — `request()` returns `data` or throws
   `ApiError(message, status, errors)`.
 - Backend response types live in `src/types/api.ts` and mirror the API resources.
+- Interface language: `src/i18n/locale.ts` (`SUPPORTED_LOCALES`, a subset of the backend's
+  `app.supported_locales`). Before sign-in it comes from localStorage or the browser; after it, from
+  the profile (`user.locale`, applied by `useAuthStore`), changed via `usersApi.updateLocale()`.
+  `request()` sends it as `Accept-Language`. UI strings are still hard-coded Russian.
+- No secrets in the frontend: everything `VITE_*` ends up in the public bundle. LLM keys for
+  translation live only on the backend.
 - Form submission state goes through `useFormSubmit()`; show `fieldError('field')` under inputs and
   `message` in `FormAlert`.
 - Auth state only in `useAuthStore`; access rules via route `meta.requiresAuth` / `meta.guestOnly`.

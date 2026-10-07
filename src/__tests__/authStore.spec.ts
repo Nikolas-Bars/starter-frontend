@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 import { ApiError } from '@/api/http'
+import { locale, setLocale } from '@/i18n/locale'
 import { useAuthStore } from '@/stores/auth'
 import { authTokenResponse, mockFetchOnce } from './helpers'
 
@@ -82,6 +83,39 @@ describe('auth store', () => {
 
     expect(auth.guestLinkCode).toBeNull()
     expect(localStorage.getItem('guest_link_code')).toBeNull()
+  })
+
+  it('берёт язык интерфейса из профиля и шлёт его в API', async () => {
+    setLocale('ru')
+    mockFetchOnce(200, {
+      ...authTokenResponse,
+      data: { ...authTokenResponse.data, user: { ...authTokenResponse.data.user, locale: 'vi' } },
+    })
+    const auth = useAuthStore()
+
+    await auth.login({ email: 'admin@example.com', password: 'Password123' })
+
+    expect(locale.value).toBe('vi')
+    expect(localStorage.getItem('locale')).toBe('vi')
+    expect(document.documentElement.lang).toBe('vi')
+
+    const fetchMock = mockFetchOnce(200, { status: 'success', message: '', data: null, errors: {} })
+    await auth.logout()
+
+    const headers = fetchMock.mock.lastCall?.[1]?.headers as Record<string, string>
+    expect(headers['Accept-Language']).toBe('vi')
+  })
+
+  it('не меняет язык, если в профиле язык, которого нет в вебе', async () => {
+    setLocale('ru')
+    mockFetchOnce(200, {
+      ...authTokenResponse,
+      data: { ...authTokenResponse.data, user: { ...authTokenResponse.data.user, locale: 'en' } },
+    })
+
+    await useAuthStore().login({ email: 'admin@example.com', password: 'Password123' })
+
+    expect(locale.value).toBe('ru')
   })
 
   it('выходит локально, даже если бэкенд недоступен', async () => {

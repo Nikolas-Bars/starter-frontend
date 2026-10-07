@@ -1,4 +1,5 @@
 import { http } from '@/api/http'
+import type { Locale } from '@/i18n/locale'
 import type { Paginated, UpdateProfilePayload, User } from '@/types/api'
 
 export const usersApi = {
@@ -18,4 +19,6 @@ export const usersApi = {
     return http.post<User>('profile/avatar', form)
   },
   deleteAvatar: () => http.delete<User>('profile/avatar'),
+  /** Язык хранится в профиле; ответ уже на новом языке */
+  updateLocale: (locale: Locale) => http.put<User>('profile/locale', { locale }),
 }

@@ -9,6 +9,7 @@ import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { DEFAULT_LOCALE } from '@/i18n/locale'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import type { CallLinkInvite, User } from '@/types/api'
@@ -37,6 +38,7 @@ const owner = computed<User | null>(() =>
         ...invite.value.owner,
         username: null,
         avatar_url: null,
+        locale: DEFAULT_LOCALE,
         email: '',
         email_verified_at: null,
         created_at: null,
