@@ -224,6 +224,23 @@ describe('useChatStore', () => {
     expect(store.chats[7]!.last_message?.id).toBe(12)
   })
 
+  it('то же сообщение с переводом обновляет и переписку, и список чатов', async () => {
+    const store = await setup()
+
+    emit({ type: 'chat.message', data: { message: message(12, 2) } })
+    emit({
+      type: 'chat.message',
+      data: { message: message(12, 2, { body_locale: 'vi', translations: { ru: 'Привет' } }) },
+    })
+    await flushPromises()
+
+    expect(store.threads[7]!.messages.find((item) => item.id === 12)?.translations).toEqual({
+      ru: 'Привет',
+    })
+    expect(store.chats[7]!.last_message?.translations).toEqual({ ru: 'Привет' })
+    expect(store.chats[7]!.unread_count).toBe(2)
+  })
+
   it('загружает чат, которого ещё нет в списке', async () => {
     const store = await setup()
     api.show.mockResolvedValueOnce(chat({ id: 8, last_message: message(20, 3, { chat_id: 8 }) }))
