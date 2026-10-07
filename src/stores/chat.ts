@@ -12,9 +12,11 @@ import type {
   ChatAttachmentState,
   ChatMessage,
   ChatMessageDeletedState,
+  ChatMessageTranslatedState,
   ChatReaction,
   ChatReactionState,
   ChatReadState,
+  ChatTranslationNoteState,
   User,
 } from '@/types/api'
 import type { ServerMessage } from '@/types/call'
@@ -279,6 +281,8 @@ export const useChatStore = defineStore('chat', () => {
       client_id: clientId(),
       type: 'text',
       body,
+      body_locale: null,
+      translations: {},
       call: null,
       forwarded_from: null,
       edited_at: null,
@@ -509,9 +513,19 @@ export const useChatStore = defineStore('chat', () => {
     if (message === undefined || messageId === 0 || text === '' || text === message.body) {
       return
     }
-    const previous = { body: message.body, edited_at: message.edited_at }
-    message.body = text
-    message.edited_at = new Date().toISOString()
+    const previous = {
+      body: message.body,
+      body_locale: message.body_locale,
+      translations: message.translations,
+      edited_at: message.edited_at,
+    }
+    // Перевод старого текста больше не верен; новый придёт событием chat.message_translated
+    Object.assign(message, {
+      body: text,
+      body_locale: null,
+      translations: {},
+      edited_at: new Date().toISOString(),
+    })
     try {
       applyUpdated(await chatsApi.edit(chatId, messageId, text))
     } catch (error) {
@@ -529,6 +543,31 @@ export const useChatStore = defineStore('chat', () => {
     if (chat?.last_message?.id === message.id) {
       chat.last_message = message
     }
+  }
+
+  function applyTranslated(state: ChatMessageTranslatedState): void {
+    const update = (message: ChatMessage | null | undefined): void => {
+      if (message?.id === state.message_id) {
+        message.body_locale = state.body_locale
+        message.translations = state.translations
+      }
+    }
+    update(threads.value[state.chat_id]?.messages.find((item) => item.id === state.message_id))
+    update(chats.value[state.chat_id]?.last_message)
+  }
+
+  function applyTranslationNote(state: ChatTranslationNoteState): void {
+    const chat = chats.value[state.chat_id]
+    if (chat !== undefined) {
+      chat.translation_note = state.translation_note
+    }
+  }
+
+  /** Заметка для переводчика: кто кем друг другу приходится. Ошибку бросает дальше */
+  async function setTranslationNote(chatId: number, note: string): Promise<void> {
+    const text = note.trim()
+    const saved = await chatsApi.setTranslationNote(chatId, text === '' ? null : text)
+    applyTranslationNote({ chat_id: chatId, translation_note: saved.translation_note })
   }
 
   /** Пересылает сообщение в чат targetChatId; новое сообщение придёт в переписку как обычное */
@@ -611,6 +650,12 @@ export const useChatStore = defineStore('chat', () => {
         return
       case 'chat.message_updated':
         applyUpdated(message.data.message)
+        return
+      case 'chat.message_translated':
+        applyTranslated(message.data)
+        return
+      case 'chat.translation_note':
+        applyTranslationNote(message.data)
         return
       case 'chat.typing':
         if (message.data.user_id !== myId()) {
@@ -754,6 +799,7 @@ export const useChatStore = defineStore('chat', () => {
     deleteMessage,
     editMessage,
     forward,
+    setTranslationNote,
     notifyTyping,
     isTyping,
     setActive,

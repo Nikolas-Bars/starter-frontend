@@ -95,6 +95,11 @@ const PATHS = {
   pause: ['M7 4h3v16H7zM14 4h3v16h-3z'],
   download: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M7 10l5 5 5-5', 'M12 15V3'],
   stop: ['M6 6h12v12H6z'],
+  globe: [
+    'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z',
+    'M2 12h20',
+    'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
+  ],
 } satisfies Record<string, string[]>
 
 export type IconName = keyof typeof PATHS

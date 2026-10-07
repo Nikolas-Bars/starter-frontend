@@ -56,6 +56,8 @@ function lastMessage(chatId: number, id: number): ChatMessage {
     client_id: `client-${id}`,
     type: 'text',
     body: 'Привет',
+    body_locale: null,
+    translations: {},
     call: null,
     forwarded_from: null,
     edited_at: null,
@@ -74,6 +76,7 @@ function chat(id: number, unread: number): Chat {
     unread_count: unread,
     last_read_message_id: 0,
     peer_last_read_message_id: 0,
+    translation_note: null,
     created_at: null,
   }
 }
