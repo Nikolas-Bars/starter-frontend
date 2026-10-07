@@ -11,6 +11,7 @@ import BaseIcon from '@/components/ui/BaseIcon.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { LANGUAGE_NAMES, SUPPORTED_LOCALES, locale, type Locale } from '@/i18n/locale'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/api'
 
@@ -25,6 +26,24 @@ const loggingOut = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const avatarBusy = ref(false)
 const avatarError = ref('')
+const localeBusy = ref(false)
+const localeError = ref('')
+
+/** Язык хранится в профиле: общий для веба и приложения, на него переводятся входящие сообщения */
+async function changeLocale(next: Locale): Promise<void> {
+  if (next === locale.value || localeBusy.value) {
+    return
+  }
+  localeBusy.value = true
+  localeError.value = ''
+  try {
+    auth.setUser(await usersApi.updateLocale(next))
+  } catch (error) {
+    localeError.value = error instanceof ApiError ? error.message : 'Не удалось сменить язык.'
+  } finally {
+    localeBusy.value = false
+  }
+}
 
 async function changeAvatar(task: () => Promise<User>): Promise<void> {
   avatarBusy.value = true
@@ -127,6 +146,28 @@ async function logout(): Promise<void> {
           По нику вас найдут в поиске: латиница, цифры и _, от 3 до 32 символов.
         </p>
       </div>
+      <fieldset class="profile__field profile__locale" :disabled="localeBusy">
+        <legend class="profile__label">Язык</legend>
+        <div class="segmented" role="radiogroup" aria-label="Язык">
+          <button
+            v-for="code in SUPPORTED_LOCALES"
+            :key="code"
+            type="button"
+            role="radio"
+            class="segmented__item"
+            :class="{ 'segmented__item--active': code === locale }"
+            :aria-checked="code === locale"
+            :lang="code"
+            @click="changeLocale(code)"
+          >
+            {{ LANGUAGE_NAMES[code] }}
+          </button>
+        </div>
+        <p class="profile__hint">
+          На этот язык переводятся входящие сообщения и ответы сервера. Он общий с приложением.
+        </p>
+        <FormAlert :message="localeError" />
+      </fieldset>
       <FormAlert :message="message" />
       <p v-if="saved" class="profile__saved" role="status">Сохранено</p>
       <BaseButton type="submit" :loading="loading">Сохранить</BaseButton>
@@ -175,6 +216,48 @@ async function logout(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+}
+
+.profile__locale {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.profile__label {
+  margin-bottom: 0.375rem;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  background: var(--color-surface-muted);
+}
+
+.segmented__item {
+  padding: 0.375rem 0.875rem;
+  border: none;
+  border-radius: calc(var(--radius) - 0.25rem);
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segmented__item--active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.segmented__item:disabled {
+  cursor: progress;
 }
 
 .profile__hint {

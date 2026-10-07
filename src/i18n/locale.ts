@@ -10,6 +10,12 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number]
 
 export const DEFAULT_LOCALE: Locale = SUPPORTED_LOCALES[0]
 
+/** Каждый язык называется на самом себе: так его найдёт тот, кто не читает текущий */
+export const LANGUAGE_NAMES: Record<Locale, string> = {
+  ru: 'Русский',
+  vi: 'Tiếng Việt',
+}
+
 const STORAGE_KEY = 'locale'
 
 export function isLocale(value: unknown): value is Locale {
