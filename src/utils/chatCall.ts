@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import type { ChatMessageCall } from '@/types/api'
 import { formatDuration } from '@/utils/format'
 
@@ -10,15 +11,15 @@ export function isMissedCall(call: ChatMessageCall, outgoing: boolean): boolean 
 export function callTitle(call: ChatMessageCall, outgoing: boolean): string {
   switch (call.status) {
     case 'ended':
-      return outgoing ? 'Исходящий звонок' : 'Входящий звонок'
+      return t(outgoing ? 'chats.call.outgoing' : 'chats.call.incoming')
     case 'rejected':
-      return outgoing ? 'Звонок отклонён' : 'Вы отклонили звонок'
+      return t(outgoing ? 'chats.call.rejectedByPeer' : 'chats.call.rejectedByMe')
     case 'missed':
-      return outgoing ? 'Без ответа' : 'Пропущенный звонок'
+      return t(outgoing ? 'chats.call.noAnswer' : 'chats.call.missed')
     case 'busy':
-      return outgoing ? 'Собеседник был занят' : 'Пропущенный звонок'
+      return t(outgoing ? 'chats.call.peerBusy' : 'chats.call.missed')
     case 'unavailable':
-      return outgoing ? 'Собеседник был не в сети' : 'Пропущенный звонок'
+      return t(outgoing ? 'chats.call.peerOffline' : 'chats.call.missed')
   }
 }
 

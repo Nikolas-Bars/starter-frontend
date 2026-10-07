@@ -49,6 +49,8 @@ describe('ProfileView: язык', () => {
     expect(JSON.parse(String(fetchMock.mock.lastCall?.[1]?.body))).toEqual({ locale: 'vi' })
     expect(locale.value).toBe('vi')
     expect(vietnamese.attributes('aria-checked')).toBe('true')
+    expect(wrapper.find('legend').text()).toBe('Ngôn ngữ')
+    expect(wrapper.find('button[type="submit"]').text()).toBe('Lưu')
   })
 
   it('при ошибке остаётся на прежнем языке и показывает её', async () => {

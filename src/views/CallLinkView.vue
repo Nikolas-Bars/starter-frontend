@@ -9,6 +9,7 @@ import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { t } from '@/i18n'
 import { DEFAULT_LOCALE } from '@/i18n/locale'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
@@ -53,8 +54,8 @@ const presence = computed(() => {
     return null
   }
   return callStore.isUserOnline(owner.value.id)
-    ? { online: true, text: 'Сейчас в сети' }
-    : { online: false, text: 'Сейчас не в сети — звонок не дойдёт' }
+    ? { online: true, text: t('callLinks.ownerOnline') }
+    : { online: false, text: t('callLinks.ownerOffline') }
 })
 
 const showEnded = computed(() => hasCalled.value && callStore.phase === 'idle')
@@ -67,8 +68,7 @@ onMounted(async () => {
   try {
     invite.value = await callLinksApi.show(code.value)
   } catch (error) {
-    loadError.value =
-      error instanceof ApiError ? error.message : 'Не удалось открыть ссылку. Попробуйте ещё раз.'
+    loadError.value = error instanceof ApiError ? error.message : t('callLinks.openFailed')
   } finally {
     loading.value = false
   }
@@ -112,7 +112,7 @@ async function call(video: boolean): Promise<void> {
   connecting.value = false
 
   if (!ready) {
-    callError.value = 'Не удалось подключиться к серверу звонков. Попробуйте ещё раз.'
+    callError.value = t('callLinks.socketFailed')
     return
   }
 
@@ -122,24 +122,26 @@ async function call(video: boolean): Promise<void> {
 </script>
 
 <template>
-  <BaseCard v-if="loading" title="Открываем ссылку…" />
+  <BaseCard v-if="loading" :title="t('callLinks.opening')" />
 
-  <BaseCard v-else-if="loadError || invite === null" title="Ссылка не работает">
+  <BaseCard v-else-if="loadError || invite === null" :title="t('callLinks.broken')">
     <FormAlert :message="loadError" />
     <template #footer>
-      <RouterLink :to="{ name: 'chats' }">На главную</RouterLink>
+      <RouterLink :to="{ name: 'chats' }">{{ t('callLinks.toHome') }}</RouterLink>
     </template>
   </BaseCard>
 
   <BaseCard
     v-else-if="isOwnLink"
-    title="Это ваша ссылка"
-    subtitle="Отправьте её тому, кто хочет вам позвонить: регистрироваться ему не нужно."
+    :title="t('callLinks.ownTitle')"
+    :subtitle="t('callLinks.ownText')"
   >
-    <RouterLink class="link-call__primary" :to="{ name: 'calls' }">К видеозвонкам</RouterLink>
+    <RouterLink class="link-call__primary" :to="{ name: 'calls' }">
+      {{ t('callLinks.toCalls') }}
+    </RouterLink>
   </BaseCard>
 
-  <BaseCard v-else :title="invite.owner.name" subtitle="приглашает вас на видеозвонок">
+  <BaseCard v-else :title="invite.owner.name" :subtitle="t('callLinks.invites')">
     <form class="link-call" novalidate @submit.prevent="call(true)">
       <p
         v-if="presence"
@@ -151,20 +153,22 @@ async function call(video: boolean): Promise<void> {
       </p>
 
       <p v-if="showEnded" class="link-call__ended" role="status">
-        Звонок завершён. Можно позвонить ещё раз.
+        {{ t('callLinks.ended') }}
       </p>
 
       <BaseInput
         v-if="!auth.isAuthenticated"
         v-model="name"
-        label="Как вас представить"
+        :label="t('callLinks.nameLabel')"
         autocomplete="name"
         required
         :error="fieldError('name')"
       />
-      <p v-else class="link-call__me">
-        Вы звоните как <strong>{{ auth.user?.name }}</strong>
-      </p>
+      <i18n-t v-else keypath="callLinks.callingAs" tag="p" class="link-call__me">
+        <template #name>
+          <strong>{{ auth.user?.name }}</strong>
+        </template>
+      </i18n-t>
 
       <FormAlert :message="message || callError" />
 
@@ -175,7 +179,7 @@ async function call(video: boolean): Promise<void> {
           :loading="joining || connecting"
           :disabled="callStore.isBusy"
         >
-          Позвонить
+          {{ t('callLinks.call') }}
         </BaseButton>
         <BaseButton
           variant="ghost"
@@ -183,23 +187,25 @@ async function call(video: boolean): Promise<void> {
           :disabled="joining || connecting || callStore.isBusy"
           @click="call(false)"
         >
-          Только голос
+          {{ t('callLinks.voiceOnly') }}
         </BaseButton>
       </div>
 
       <p class="link-call__hint">
-        Браузер попросит доступ к камере и микрофону. Видео идёт напрямую между вами.
+        {{ t('callLinks.permissionsHint') }}
       </p>
     </form>
 
     <template #footer>
       <template v-if="auth.isGuest">
-        Хотите, чтобы вам тоже звонили по ссылке?
-        <RouterLink :to="{ name: 'register' }">Создайте аккаунт</RouterLink>
+        {{ t('callLinks.wantOwnLink') }}
+        <RouterLink :to="{ name: 'register' }">{{ t('callLinks.createAccount') }}</RouterLink>
       </template>
       <template v-else-if="!auth.isAuthenticated">
-        Уже есть аккаунт?
-        <RouterLink :to="{ name: 'login', query: { redirect: route.fullPath } }">Войти</RouterLink>
+        {{ t('auth.haveAccount') }}
+        <RouterLink :to="{ name: 'login', query: { redirect: route.fullPath } }">
+          {{ t('auth.loginLink') }}
+        </RouterLink>
       </template>
     </template>
   </BaseCard>

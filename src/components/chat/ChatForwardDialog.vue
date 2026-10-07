@@ -6,6 +6,7 @@ import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { ApiError } from '@/api/http'
+import { t } from '@/i18n'
 import { useChatStore } from '@/stores/chat'
 
 /** Что пересылаем; null — диалог закрыт */
@@ -55,7 +56,7 @@ async function forwardTo(chatId: number): Promise<void> {
     emit('close')
     void router.push({ name: 'chat', params: { id: chatId } })
   } catch (caught) {
-    error.value = caught instanceof ApiError ? caught.message : 'Не удалось переслать сообщение.'
+    error.value = caught instanceof ApiError ? caught.message : t('chats.forward.failed')
   } finally {
     sending.value = null
   }
@@ -65,8 +66,13 @@ async function forwardTo(chatId: number): Promise<void> {
 <template>
   <dialog ref="dialog" class="forward" aria-labelledby="forward-title" @close="emit('close')">
     <header class="forward__header">
-      <h2 id="forward-title" class="forward__title">Переслать</h2>
-      <button type="button" class="forward__close" aria-label="Закрыть" @click="emit('close')">
+      <h2 id="forward-title" class="forward__title">{{ t('chats.forward.title') }}</h2>
+      <button
+        type="button"
+        class="forward__close"
+        :aria-label="t('common.close')"
+        @click="emit('close')"
+      >
         <BaseIcon name="close" />
       </button>
     </header>
@@ -75,8 +81,8 @@ async function forwardTo(chatId: number): Promise<void> {
       v-model="query"
       class="forward__search"
       type="search"
-      placeholder="Кому переслать"
-      aria-label="Найти чат"
+      :placeholder="t('chats.forward.placeholder')"
+      :aria-label="t('chats.forward.search')"
     />
     <FormAlert :message="error" />
 
@@ -90,10 +96,12 @@ async function forwardTo(chatId: number): Promise<void> {
         >
           <BaseAvatar :name="chat.peer!.name" :src="chat.peer!.avatar_url" />
           <span class="forward__name">{{ chat.peer!.name }}</span>
-          <span v-if="sending === chat.id" class="forward__sending">Пересылаем…</span>
+          <span v-if="sending === chat.id" class="forward__sending">{{
+            t('chats.forward.sending')
+          }}</span>
         </button>
       </li>
-      <li v-if="targets.length === 0" class="forward__empty">Чатов не найдено</li>
+      <li v-if="targets.length === 0" class="forward__empty">{{ t('chats.forward.empty') }}</li>
     </ul>
   </dialog>
 </template>

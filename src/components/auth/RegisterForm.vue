@@ -5,6 +5,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const emit = defineEmits<{ success: [] }>()
@@ -33,26 +34,24 @@ async function onSubmit(): Promise<void> {
 
     <BaseInput
       v-model="form.name"
-      label="Имя"
+      :label="t('auth.name')"
       autocomplete="name"
       required
       :error="fieldError('name')"
     />
     <BaseInput
       v-model="form.username"
-      label="Ник"
+      :label="t('auth.username')"
       autocomplete="username"
       autocapitalize="none"
       spellcheck="false"
       required
       :error="fieldError('username')"
     />
-    <p class="auth-form__hint">
-      По нику вас найдут в поиске: латиница, цифры и _, от 3 до 32 символов.
-    </p>
+    <p class="auth-form__hint">{{ t('auth.usernameHint') }}</p>
     <BaseInput
       v-model="form.email"
-      label="Email"
+      :label="t('auth.email')"
       type="email"
       autocomplete="email"
       required
@@ -60,7 +59,7 @@ async function onSubmit(): Promise<void> {
     />
     <BaseInput
       v-model="form.password"
-      label="Пароль"
+      :label="t('auth.password')"
       type="password"
       autocomplete="new-password"
       required
@@ -68,14 +67,14 @@ async function onSubmit(): Promise<void> {
     />
     <BaseInput
       v-model="form.password_confirmation"
-      label="Повторите пароль"
+      :label="t('auth.passwordConfirmation')"
       type="password"
       autocomplete="new-password"
       required
     />
-    <p class="auth-form__hint">Минимум 8 символов: заглавные и строчные буквы и цифры.</p>
+    <p class="auth-form__hint">{{ t('auth.passwordHint') }}</p>
 
-    <BaseButton type="submit" :loading="loading">Зарегистрироваться</BaseButton>
+    <BaseButton type="submit" :loading="loading">{{ t('auth.registerAction') }}</BaseButton>
   </form>
 </template>
 

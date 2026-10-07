@@ -9,6 +9,7 @@ import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import { useChatStore } from '@/stores/chat'
 import { useChatFoldersStore } from '@/stores/chatFolders'
@@ -61,7 +62,7 @@ async function find(value: string): Promise<void> {
     }
   } catch {
     if (current === requestId) {
-      searchError.value = 'Не удалось найти пользователей.'
+      searchError.value = t('chats.search.failed')
     }
   } finally {
     if (current === requestId) {
@@ -78,7 +79,7 @@ async function openChat(user: User): Promise<void> {
     search.value = ''
     await router.push({ name: 'chat', params: { id: chat.id } })
   } catch {
-    searchError.value = 'Не удалось открыть чат.'
+    searchError.value = t('chats.errors.openChat')
   } finally {
     opening.value = null
   }
@@ -88,13 +89,13 @@ async function openChat(user: User): Promise<void> {
 <template>
   <aside class="sidebar">
     <header class="sidebar__header">
-      <h1 class="sidebar__title">Чаты</h1>
-      <nav class="sidebar__nav" aria-label="Разделы">
+      <h1 class="sidebar__title">{{ t('chats.title') }}</h1>
+      <nav class="sidebar__nav" :aria-label="t('nav.label')">
         <RouterLink
           class="sidebar__link"
           :to="{ name: 'calls' }"
-          aria-label="Звонки"
-          title="Звонки"
+          :aria-label="t('nav.calls')"
+          :title="t('nav.calls')"
         >
           <BaseIcon name="phone" />
           <span v-if="callStore.missedCount > 0" class="sidebar__dot" aria-hidden="true" />
@@ -102,8 +103,8 @@ async function openChat(user: User): Promise<void> {
         <RouterLink
           class="sidebar__link"
           :to="{ name: 'profile' }"
-          aria-label="Профиль"
-          title="Профиль"
+          :aria-label="t('nav.profile')"
+          :title="t('nav.profile')"
         >
           <BaseIcon name="user" />
         </RouterLink>
@@ -116,8 +117,8 @@ async function openChat(user: User): Promise<void> {
         v-model="search"
         class="sidebar__search-input"
         type="search"
-        placeholder="Поиск по @нику"
-        aria-label="Найти пользователя по нику"
+        :placeholder="t('chats.search.placeholder')"
+        :aria-label="t('chats.search.label')"
         autocomplete="off"
       />
     </label>
@@ -148,7 +149,9 @@ async function openChat(user: User): Promise<void> {
             </button>
           </li>
         </ul>
-        <p v-else-if="!searching && !searchError" class="sidebar__empty">Никого не нашли.</p>
+        <p v-else-if="!searching && !searchError" class="sidebar__empty">
+          {{ t('common.nobodyFound') }}
+        </p>
       </template>
 
       <template v-else>
@@ -159,14 +162,13 @@ async function openChat(user: User): Promise<void> {
           </li>
         </ul>
         <p v-else-if="folderStore.activeFolder" class="sidebar__empty">
-          <template v-if="folderStore.loadingChats">Загружаем…</template>
+          <template v-if="folderStore.loadingChats">{{ t('common.loading') }}</template>
           <template v-else>
-            В папке «{{ folderStore.activeFolder.name }}» пока нет чатов. Откройте чат и нажмите
-            значок папки в его шапке.
+            {{ t('chats.folders.empty', { name: folderStore.activeFolder.name }) }}
           </template>
         </p>
         <p v-else-if="chatStore.listLoaded" class="sidebar__empty">
-          Переписок пока нет. Найдите собеседника по нику.
+          {{ t('chats.empty') }}
         </p>
         <BaseButton
           v-if="folderStore.hasMoreChats"
@@ -174,7 +176,7 @@ async function openChat(user: User): Promise<void> {
           :loading="folderStore.loadingChats"
           @click="folderStore.loadMore()"
         >
-          Показать ещё
+          {{ t('common.showMore') }}
         </BaseButton>
       </template>
     </div>

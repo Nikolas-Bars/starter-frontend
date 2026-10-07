@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import BaseIcon from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { useChatFoldersStore } from '@/stores/chatFolders'
 
 const props = defineProps<{ chatId: number }>()
@@ -54,15 +55,15 @@ function manage(): void {
       type="button"
       class="menu__trigger"
       :class="{ 'menu__trigger--active': inAnyFolder }"
-      aria-label="Папки этого чата"
-      title="Папки"
+      :aria-label="t('chats.folders.ofChat')"
+      :title="t('chats.folders.title')"
       aria-haspopup="menu"
       :aria-expanded="open"
       @click="open = !open"
     >
       <BaseIcon name="folder" />
     </button>
-    <div v-if="open" class="menu__popup" role="menu" aria-label="Папки">
+    <div v-if="open" class="menu__popup" role="menu" :aria-label="t('chats.folders.title')">
       <button
         v-for="folder in folderStore.folders"
         :key="folder.id"
@@ -77,13 +78,17 @@ function manage(): void {
         </span>
         <span class="menu__label">{{ folder.name }}</span>
       </button>
-      <p v-if="folderStore.folders.length === 0" class="menu__empty">Папок пока нет</p>
+      <p v-if="folderStore.folders.length === 0" class="menu__empty">
+        {{ t('chats.folders.none') }}
+      </p>
       <button type="button" role="menuitem" class="menu__item menu__item--manage" @click="manage">
         <span class="menu__check">
           <BaseIcon :name="folderStore.folders.length === 0 ? 'plus' : 'sliders'" />
         </span>
         <span class="menu__label">
-          {{ folderStore.folders.length === 0 ? 'Создать папку' : 'Настроить папки' }}
+          {{
+            t(folderStore.folders.length === 0 ? 'chats.folders.create' : 'chats.folders.manage')
+          }}
         </span>
       </button>
     </div>

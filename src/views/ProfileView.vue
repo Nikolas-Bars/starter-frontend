@@ -11,6 +11,7 @@ import BaseIcon from '@/components/ui/BaseIcon.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { t } from '@/i18n'
 import { LANGUAGE_NAMES, SUPPORTED_LOCALES, locale, type Locale } from '@/i18n/locale'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/api'
@@ -39,7 +40,7 @@ async function changeLocale(next: Locale): Promise<void> {
   try {
     auth.setUser(await usersApi.updateLocale(next))
   } catch (error) {
-    localeError.value = error instanceof ApiError ? error.message : 'Не удалось сменить язык.'
+    localeError.value = error instanceof ApiError ? error.message : t('profile.languageFailed')
   } finally {
     localeBusy.value = false
   }
@@ -54,7 +55,7 @@ async function changeAvatar(task: () => Promise<User>): Promise<void> {
     avatarError.value =
       error instanceof ApiError
         ? (Object.values(error.errors)[0]?.[0] ?? error.message)
-        : 'Не удалось обновить аватарку.'
+        : t('profile.avatarFailed')
   } finally {
     avatarBusy.value = false
   }
@@ -70,7 +71,7 @@ function onAvatarPicked(event: Event): void {
 }
 
 function removeAvatar(): void {
-  if (window.confirm('Убрать аватарку?')) {
+  if (window.confirm(t('profile.avatarRemoveConfirm'))) {
     void changeAvatar(() => usersApi.deleteAvatar())
   }
 }
@@ -97,7 +98,7 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <BaseCard title="Профиль" :subtitle="auth.user?.email ?? undefined">
+  <BaseCard :title="t('profile.title')" :subtitle="auth.user?.email ?? undefined">
     <div class="profile__avatar">
       <BaseAvatar :name="auth.user?.name ?? ''" :src="auth.user?.avatar_url" size="xl" />
       <div class="profile__avatar-actions">
@@ -107,7 +108,7 @@ async function logout(): Promise<void> {
           :loading="avatarBusy"
           @click="avatarInput?.click()"
         >
-          {{ auth.user?.avatar_url ? 'Сменить фото' : 'Поставить фото' }}
+          {{ auth.user?.avatar_url ? t('profile.avatarChange') : t('profile.avatarSet') }}
         </BaseButton>
         <BaseButton
           v-if="auth.user?.avatar_url"
@@ -115,7 +116,7 @@ async function logout(): Promise<void> {
           :disabled="avatarBusy"
           @click="removeAvatar"
         >
-          Убрать
+          {{ t('profile.avatarRemove') }}
         </BaseButton>
       </div>
       <input
@@ -130,7 +131,7 @@ async function logout(): Promise<void> {
     <form class="profile" novalidate @submit.prevent="save">
       <BaseInput
         v-model="name"
-        label="Имя"
+        :label="t('profile.name')"
         autocomplete="name"
         :error="fieldError('name')"
         required
@@ -138,17 +139,15 @@ async function logout(): Promise<void> {
       <div class="profile__field">
         <BaseInput
           v-model="username"
-          label="Ник"
+          :label="t('profile.username')"
           autocomplete="username"
           :error="fieldError('username')"
         />
-        <p class="profile__hint">
-          По нику вас найдут в поиске: латиница, цифры и _, от 3 до 32 символов.
-        </p>
+        <p class="profile__hint">{{ t('profile.usernameHint') }}</p>
       </div>
       <fieldset class="profile__field profile__locale" :disabled="localeBusy">
-        <legend class="profile__label">Язык</legend>
-        <div class="segmented" role="radiogroup" aria-label="Язык">
+        <legend class="profile__label">{{ t('profile.language') }}</legend>
+        <div class="segmented" role="radiogroup" :aria-label="t('profile.language')">
           <button
             v-for="code in SUPPORTED_LOCALES"
             :key="code"
@@ -163,24 +162,22 @@ async function logout(): Promise<void> {
             {{ LANGUAGE_NAMES[code] }}
           </button>
         </div>
-        <p class="profile__hint">
-          На этот язык переводятся входящие сообщения и ответы сервера. Он общий с приложением.
-        </p>
+        <p class="profile__hint">{{ t('profile.languageHint') }}</p>
         <FormAlert :message="localeError" />
       </fieldset>
       <FormAlert :message="message" />
-      <p v-if="saved" class="profile__saved" role="status">Сохранено</p>
-      <BaseButton type="submit" :loading="loading">Сохранить</BaseButton>
+      <p v-if="saved" class="profile__saved" role="status">{{ t('profile.saved') }}</p>
+      <BaseButton type="submit" :loading="loading">{{ t('common.save') }}</BaseButton>
     </form>
 
     <template #footer>
       <div class="profile__footer">
         <RouterLink :to="{ name: 'chats' }" class="profile__back">
           <BaseIcon name="arrow-left" />
-          К чатам
+          {{ t('profile.toChats') }}
         </RouterLink>
         <BaseButton variant="ghost" icon="log-out" :loading="loggingOut" @click="logout">
-          Выйти
+          {{ t('profile.logout') }}
         </BaseButton>
       </div>
     </template>

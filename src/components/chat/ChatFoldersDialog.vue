@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { t } from '@/i18n'
 import { MAX_FOLDER_NAME_LENGTH, MAX_FOLDERS, useChatFoldersStore } from '@/stores/chatFolders'
 
 const folderStore = useChatFoldersStore()
@@ -81,21 +82,22 @@ async function remove(folderId: number): Promise<void> {
     @close="folderStore.managerOpen = false"
   >
     <header class="folders__header">
-      <h2 id="folders-title" class="folders__title">Папки</h2>
+      <h2 id="folders-title" class="folders__title">{{ t('chats.folders.title') }}</h2>
       <button
         type="button"
         class="folders__close"
-        aria-label="Закрыть"
+        :aria-label="t('common.close')"
         @click="folderStore.managerOpen = false"
       >
         <BaseIcon name="close" />
       </button>
     </header>
 
-    <p class="folders__hint">
-      Папки видите только вы. Чтобы положить чат в папку, откройте его и нажмите
-      <BaseIcon name="folder" class="folders__inline-icon" /> в шапке.
-    </p>
+    <i18n-t keypath="chats.folders.hint" tag="p" class="folders__hint">
+      <template #icon>
+        <BaseIcon name="folder" class="folders__inline-icon" />
+      </template>
+    </i18n-t>
 
     <FormAlert :message="error" />
 
@@ -106,18 +108,21 @@ async function remove(folderId: number): Promise<void> {
           v-model="drafts[folder.id]"
           class="folders__input"
           :maxlength="MAX_FOLDER_NAME_LENGTH"
-          :aria-label="`Название папки ${folder.name}`"
+          :aria-label="t('chats.folders.nameOf', { name: folder.name })"
           @blur="rename(folder.id)"
           @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
         />
-        <span class="folders__count" :title="`Чатов в папке: ${folder.chat_ids.length}`">
+        <span
+          class="folders__count"
+          :title="t('chats.folders.chatsCount', { count: folder.chat_ids.length })"
+        >
           {{ folder.chat_ids.length }}
         </span>
         <button
           type="button"
           class="folders__delete"
-          :aria-label="`Удалить папку ${folder.name}`"
-          title="Удалить папку (чаты останутся)"
+          :aria-label="t('chats.folders.removeNamed', { name: folder.name })"
+          :title="t('chats.folders.removeHint')"
           @click="remove(folder.id)"
         >
           <BaseIcon name="trash" />
@@ -129,8 +134,8 @@ async function remove(folderId: number): Promise<void> {
       <input
         v-model="newName"
         class="folders__input folders__input--new"
-        placeholder="Например, «Работа»"
-        aria-label="Название новой папки"
+        :placeholder="t('chats.folders.namePlaceholder')"
+        :aria-label="t('chats.folders.newName')"
         :maxlength="MAX_FOLDER_NAME_LENGTH"
         :disabled="folderStore.folders.length >= MAX_FOLDERS"
         @keydown.enter.prevent="create"
@@ -141,11 +146,11 @@ async function remove(folderId: number): Promise<void> {
         :loading="creating"
         :disabled="newName.trim() === '' || folderStore.folders.length >= MAX_FOLDERS"
       >
-        Добавить
+        {{ t('chats.folders.add') }}
       </BaseButton>
     </form>
     <p v-if="folderStore.folders.length >= MAX_FOLDERS" class="folders__hint">
-      Папок может быть не больше {{ MAX_FOLDERS }}.
+      {{ t('chats.folders.limit', { count: MAX_FOLDERS }) }}
     </p>
   </dialog>
 </template>

@@ -1,5 +1,6 @@
 import type { ApiResponse, ValidationErrors } from '@/types/api'
 import { tokenStorage } from '@/api/tokenStorage'
+import { t } from '@/i18n'
 import { locale } from '@/i18n/locale'
 
 export class ApiError extends Error {
@@ -55,14 +56,14 @@ export async function request<T>(method: HttpMethod, path: string, body?: unknow
       body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     })
   } catch {
-    throw new ApiError('Сервер недоступен. Проверьте, что бэкенд запущен.', 0)
+    throw new ApiError(t('errors.network'), 0)
   }
 
   const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null
 
   if (!response.ok || payload === null) {
     throw new ApiError(
-      payload?.message || `Ошибка запроса (${response.status})`,
+      payload?.message || t('errors.requestFailed', { status: response.status }),
       response.status,
       payload?.errors ?? {},
     )

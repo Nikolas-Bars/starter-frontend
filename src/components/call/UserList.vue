@@ -5,6 +5,7 @@ import { usersApi } from '@/api/users'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import type { User } from '@/types/api'
 
@@ -37,7 +38,7 @@ async function load(nextPage: number): Promise<void> {
     lastPage.value = result.meta.last_page
   } catch {
     if (current === requestId) {
-      error.value = 'Не удалось загрузить пользователей.'
+      error.value = t('calls.users.loadFailed')
     }
   } finally {
     if (current === requestId) {
@@ -64,9 +65,9 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="users">
-    <h2 class="users__title">Пользователи</h2>
+    <h2 class="users__title">{{ t('calls.users.title') }}</h2>
 
-    <BaseInput v-model="search" label="Поиск по нику" />
+    <BaseInput v-model="search" :label="t('calls.users.search')" />
 
     <FormAlert :message="error" />
 
@@ -75,14 +76,21 @@ onBeforeUnmount(() => {
         <span
           class="users__presence"
           :class="{ 'users__presence--online': callStore.isUserOnline(user.id) }"
-          :title="callStore.isUserOnline(user.id) ? 'В сети' : 'Не в сети'"
+          :title="t(callStore.isUserOnline(user.id) ? 'presence.online' : 'presence.offline')"
           aria-hidden="true"
         />
         <div class="users__info">
           <span class="users__name">
             {{ user.name }}
             <span class="visually-hidden">
-              — {{ callStore.isUserOnline(user.id) ? 'в сети' : 'не в сети' }}
+              —
+              {{
+                t(
+                  callStore.isUserOnline(user.id)
+                    ? 'presence.onlineLower'
+                    : 'presence.offlineLower',
+                )
+              }}
             </span>
           </span>
           <span v-if="user.username" class="users__email">@{{ user.username }}</span>
@@ -93,30 +101,30 @@ onBeforeUnmount(() => {
             class="users__call"
             icon="phone"
             :disabled="callStore.isBusy || !callStore.isOnline"
-            :aria-label="`Позвонить без видео: ${user.name}`"
-            title="Позвонить без видео"
+            :aria-label="t('calls.audioCallTo', { name: user.name })"
+            :title="t('calls.audioCall')"
             @click="callStore.startCall(user, { video: false })"
           >
-            <span class="users__label">Голосом</span>
+            <span class="users__label">{{ t('calls.users.voice') }}</span>
           </BaseButton>
           <BaseButton
             class="users__call"
             icon="video"
             :disabled="callStore.isBusy || !callStore.isOnline"
-            :aria-label="`Позвонить: ${user.name}`"
-            title="Видеозвонок"
+            :aria-label="t('calls.videoCallTo', { name: user.name })"
+            :title="t('calls.videoCall')"
             @click="callStore.startCall(user)"
           >
-            <span class="users__label">Позвонить</span>
+            <span class="users__label">{{ t('calls.users.call') }}</span>
           </BaseButton>
         </div>
       </li>
     </ul>
 
-    <p v-else-if="!loading && !error" class="users__empty">Никого не нашли.</p>
+    <p v-else-if="!loading && !error" class="users__empty">{{ t('common.nobodyFound') }}</p>
 
     <BaseButton v-if="page < lastPage" variant="ghost" :loading="loading" @click="load(page + 1)">
-      Показать ещё
+      {{ t('common.showMore') }}
     </BaseButton>
   </section>
 </template>

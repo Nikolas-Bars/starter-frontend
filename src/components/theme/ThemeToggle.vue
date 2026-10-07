@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import BaseIcon, { type IconName } from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { type ThemePreference, useThemeStore } from '@/stores/theme'
 
 const theme = useThemeStore()
 
-const options: { value: ThemePreference; label: string; icon: IconName }[] = [
-  { value: 'system', label: 'Как в системе', icon: 'monitor' },
-  { value: 'light', label: 'Светлая тема', icon: 'sun' },
-  { value: 'dark', label: 'Тёмная тема', icon: 'moon' },
+const options: { value: ThemePreference; icon: IconName }[] = [
+  { value: 'system', icon: 'monitor' },
+  { value: 'light', icon: 'sun' },
+  { value: 'dark', icon: 'moon' },
 ]
 </script>
 
 <template>
-  <div class="theme" role="radiogroup" aria-label="Тема оформления">
+  <div class="theme" role="radiogroup" :aria-label="t('theme.label')">
     <button
       v-for="option in options"
       :key="option.value"
@@ -21,8 +22,8 @@ const options: { value: ThemePreference; label: string; icon: IconName }[] = [
       class="theme__option"
       :class="{ 'theme__option--active': theme.preference === option.value }"
       :aria-checked="theme.preference === option.value"
-      :aria-label="option.label"
-      :title="option.label"
+      :aria-label="t(`theme.${option.value}`)"
+      :title="t(`theme.${option.value}`)"
       @click="theme.preference = option.value"
     >
       <BaseIcon :name="option.icon" />

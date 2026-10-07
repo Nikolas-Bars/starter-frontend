@@ -1,5 +1,6 @@
 import { onScopeDispose, ref, watch } from 'vue'
 
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 
 const TITLE_BLINK_MS = 1000
@@ -25,7 +26,7 @@ export function useCallAttention(): void {
   function renderTitle(): void {
     const name = callStore.counterpart?.name ?? ''
     const missed = callStore.missedCount > 0 ? `(${callStore.missedCount}) ` : ''
-    document.title = blinkOn ? `Входящий звонок: ${name}` : `${missed}${baseTitle}`
+    document.title = blinkOn ? t('calls.incomingFrom', { name }) : `${missed}${baseTitle}`
   }
 
   function stopBlink(): void {
@@ -46,7 +47,7 @@ export function useCallAttention(): void {
       return
     }
 
-    notification = new Notification('Входящий звонок', {
+    notification = new Notification(t('calls.incoming'), {
       body: callStore.counterpart?.name ?? '',
       tag: 'incoming-call',
       requireInteraction: true,

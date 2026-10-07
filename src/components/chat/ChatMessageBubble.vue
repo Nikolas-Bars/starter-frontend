@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import ChatAttachments from '@/components/chat/ChatAttachments.vue'
 import BaseIcon, { type IconName } from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { REACTIONS, type ThreadMessage } from '@/stores/chat'
 import { callTitle, isMissedCall } from '@/utils/chatCall'
 import { translatedBody } from '@/utils/chatTranslation'
@@ -56,13 +57,13 @@ const status = computed<{ icon: IconName; label: string } | null>(() => {
   }
   switch (props.message.pending) {
     case 'sending':
-      return { icon: 'clock', label: 'Отправляется' }
+      return { icon: 'clock', label: t('chats.message.status.sending') }
     case 'failed':
-      return { icon: 'alert', label: 'Не отправлено' }
+      return { icon: 'alert', label: t('chats.message.status.failed') }
     default:
       return props.read
-        ? { icon: 'check-double', label: 'Прочитано' }
-        : { icon: 'check', label: 'Отправлено' }
+        ? { icon: 'check-double', label: t('chats.message.status.read') }
+        : { icon: 'check', label: t('chats.message.status.sent') }
   }
 })
 
@@ -163,8 +164,8 @@ onBeforeUnmount(() => (menu.value = null))
           type="button"
           class="call-note"
           :class="{ 'call-note--missed': callNote.missed }"
-          :aria-label="`${callNote.title}. Перезвонить`"
-          title="Перезвонить"
+          :aria-label="t('chats.call.callBackLabel', { title: callNote.title })"
+          :title="t('calls.callBack')"
           @click="emit('callBack')"
         >
           <span class="call-note__icon"><BaseIcon :name="callNote.icon" /></span>
@@ -178,7 +179,7 @@ onBeforeUnmount(() => (menu.value = null))
         <template v-else>
           <p v-if="message.forwarded_from" class="bubble__forwarded">
             <BaseIcon name="forward" class="bubble__icon" />
-            Переслано от {{ message.forwarded_from.name }}
+            {{ t('chats.forward.from', { name: message.forwarded_from.name }) }}
           </p>
           <ChatAttachments
             v-if="attachments.length > 0"
@@ -186,7 +187,9 @@ onBeforeUnmount(() => (menu.value = null))
             :uploads="message.uploads"
           />
           <p v-if="message.body !== ''" class="bubble__body">{{ text }}</p>
-          <p v-else-if="removed" class="bubble__body bubble__body--removed">Файл удалён</p>
+          <p v-else-if="removed" class="bubble__body bubble__body--removed">
+            {{ t('chats.attachments.removed') }}
+          </p>
           <button
             v-if="translation !== null"
             type="button"
@@ -195,7 +198,13 @@ onBeforeUnmount(() => (menu.value = null))
             @click="showOriginal = !showOriginal"
           >
             <BaseIcon name="globe" class="bubble__icon" />
-            {{ showOriginal ? 'Показать перевод' : 'Переведено · показать оригинал' }}
+            {{
+              t(
+                showOriginal
+                  ? 'chats.translation.showTranslation'
+                  : 'chats.translation.showOriginal',
+              )
+            }}
           </button>
         </template>
         <div v-if="message.reactions.length > 0" class="bubble__reactions">
@@ -216,7 +225,9 @@ onBeforeUnmount(() => (menu.value = null))
           </button>
         </div>
         <span class="bubble__meta">
-          <span v-if="message.edited_at" class="bubble__edited">изменено</span>
+          <span v-if="message.edited_at" class="bubble__edited">{{
+            t('chats.message.edited')
+          }}</span>
           <time v-if="message.created_at" :datetime="message.created_at">
             {{ formatTime(message.created_at) }}
           </time>
@@ -232,8 +243,8 @@ onBeforeUnmount(() => (menu.value = null))
           type="button"
           class="message__react-trigger"
           :class="{ 'message__react-trigger--open': pickerOpen }"
-          aria-label="Поставить реакцию"
-          title="Реакция"
+          :aria-label="t('chats.message.react')"
+          :title="t('chats.message.reaction')"
           :aria-expanded="pickerOpen"
           @click="toggle('react')"
         >
@@ -244,16 +255,21 @@ onBeforeUnmount(() => (menu.value = null))
           type="button"
           class="message__react-trigger"
           :class="{ 'message__react-trigger--open': menu === 'actions' }"
-          aria-label="Действия с сообщением"
-          title="Ещё"
+          :aria-label="t('chats.message.actions')"
+          :title="t('chats.message.more')"
           :aria-expanded="menu === 'actions'"
           @click="toggle('actions')"
         >
           <BaseIcon name="more" />
         </button>
-        <div v-if="menu === 'actions'" class="actions" role="menu" aria-label="Действия">
+        <div
+          v-if="menu === 'actions'"
+          class="actions"
+          role="menu"
+          :aria-label="t('chats.message.actionsShort')"
+        >
           <button v-if="canCopy" type="button" role="menuitem" class="actions__item" @click="copy">
-            <BaseIcon name="copy" /> Копировать текст
+            <BaseIcon name="copy" /> {{ t('chats.message.copy') }}
           </button>
           <button
             v-if="canForward"
@@ -262,7 +278,7 @@ onBeforeUnmount(() => (menu.value = null))
             class="actions__item"
             @click="act('forward')"
           >
-            <BaseIcon name="forward" /> Переслать
+            <BaseIcon name="forward" /> {{ t('chats.message.forward') }}
           </button>
           <button
             v-if="editable"
@@ -271,7 +287,7 @@ onBeforeUnmount(() => (menu.value = null))
             class="actions__item"
             @click="act('edit')"
           >
-            <BaseIcon name="edit" /> Изменить
+            <BaseIcon name="edit" /> {{ t('chats.message.edit') }}
           </button>
           <button
             v-if="canDelete"
@@ -280,10 +296,15 @@ onBeforeUnmount(() => (menu.value = null))
             class="actions__item actions__item--danger"
             @click="act('delete')"
           >
-            <BaseIcon name="trash" /> Удалить у всех
+            <BaseIcon name="trash" /> {{ t('chats.message.delete') }}
           </button>
         </div>
-        <div v-if="pickerOpen" class="picker" role="menu" aria-label="Реакции">
+        <div
+          v-if="pickerOpen"
+          class="picker"
+          role="menu"
+          :aria-label="t('chats.message.reactions')"
+        >
           <button
             v-for="emoji in REACTIONS"
             :key="emoji"
@@ -306,7 +327,11 @@ onBeforeUnmount(() => (menu.value = null))
       class="message__retry"
       @click="emit('retry')"
     >
-      {{ message.error ? `${message.error} Повторить` : 'Не отправлено — повторить' }}
+      {{
+        message.error
+          ? t('chats.message.failedWithReason', { reason: message.error })
+          : t('chats.message.failedRetry')
+      }}
     </button>
   </div>
 </template>

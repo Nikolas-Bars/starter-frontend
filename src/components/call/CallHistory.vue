@@ -5,6 +5,7 @@ import { callsApi } from '@/api/calls'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useAuthStore } from '@/stores/auth'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import type { Call, User } from '@/types/api'
 import { formatDateTime, formatDuration } from '@/utils/format'
@@ -35,7 +36,7 @@ async function load(nextPage: number): Promise<void> {
     lastPage.value = result.meta.last_page
   } catch {
     if (current === requestId) {
-      error.value = 'Не удалось загрузить историю звонков.'
+      error.value = t('calls.history.loadFailed')
     }
   } finally {
     if (current === requestId) {
@@ -60,19 +61,19 @@ function summary(call: Call): string {
   const outgoing = isOutgoing(call)
   switch (call.status) {
     case 'ringing':
-      return 'Вызов'
+      return t('calls.history.ringing')
     case 'active':
-      return 'Идёт разговор'
+      return t('calls.history.active')
     case 'rejected':
-      return outgoing ? 'Отклонён собеседником' : 'Отклонён'
+      return t(outgoing ? 'calls.history.rejectedByPeer' : 'calls.history.rejected')
     case 'missed':
-      return outgoing ? 'Без ответа' : 'Пропущенный'
+      return t(outgoing ? 'calls.history.noAnswer' : 'calls.history.missed')
     case 'busy':
-      return 'Собеседник был занят'
+      return t('calls.history.busy')
     case 'unavailable':
-      return 'Собеседник был не в сети'
+      return t('calls.history.unavailable')
     case 'ended':
-      return 'Завершён'
+      return t('calls.history.ended')
   }
 }
 
@@ -90,7 +91,7 @@ onMounted(() => void load(1))
 
 <template>
   <section class="history">
-    <h2 class="history__title">История звонков</h2>
+    <h2 class="history__title">{{ t('calls.history.title') }}</h2>
 
     <FormAlert :message="error" />
 
@@ -99,7 +100,7 @@ onMounted(() => void load(1))
         <span
           class="history__direction"
           :class="{ 'history__direction--missed': isMissedByMe(call) }"
-          :title="isOutgoing(call) ? 'Исходящий' : 'Входящий'"
+          :title="t(isOutgoing(call) ? 'calls.history.outgoing' : 'calls.history.incoming')"
           aria-hidden="true"
         >
           {{ isOutgoing(call) ? '↗' : '↙' }}
@@ -107,10 +108,16 @@ onMounted(() => void load(1))
         <div class="history__info">
           <span class="history__name">
             {{ counterpart(call).name }}
-            <span v-if="counterpart(call).is_guest" class="history__guest">гость</span>
+            <span v-if="counterpart(call).is_guest" class="history__guest">{{
+              t('calls.guest')
+            }}</span>
           </span>
           <span class="history__meta">
-            <span class="visually-hidden">{{ isOutgoing(call) ? 'Исходящий' : 'Входящий' }},</span>
+            <span class="visually-hidden"
+              >{{
+                t(isOutgoing(call) ? 'calls.history.outgoing' : 'calls.history.incoming')
+              }},</span
+            >
             {{ summary(call) }} · {{ formatDateTime(call.started_at) }}
           </span>
         </div>
@@ -119,19 +126,19 @@ onMounted(() => void load(1))
           class="history__call"
           icon="phone"
           :disabled="callStore.isBusy || !callStore.isOnline"
-          :aria-label="`Перезвонить: ${counterpart(call).name}`"
-          title="Перезвонить"
+          :aria-label="t('calls.callBackTo', { name: counterpart(call).name })"
+          :title="t('calls.callBack')"
           @click="callStore.startCall(counterpart(call))"
         >
-          <span class="history__label">Перезвонить</span>
+          <span class="history__label">{{ t('calls.callBack') }}</span>
         </BaseButton>
       </li>
     </ul>
 
-    <p v-else-if="!loading && !error" class="history__empty">Звонков пока не было.</p>
+    <p v-else-if="!loading && !error" class="history__empty">{{ t('calls.history.empty') }}</p>
 
     <BaseButton v-if="page < lastPage" variant="ghost" :loading="loading" @click="load(page + 1)">
-      Показать ещё
+      {{ t('common.showMore') }}
     </BaseButton>
   </section>
 </template>

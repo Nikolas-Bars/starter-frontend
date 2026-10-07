@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/ui/BaseButton.vue'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 
 const callStore = useCallStore()
@@ -16,27 +17,27 @@ const callStore = useCallStore()
         aria-describedby="incoming-call-caller"
       >
         <span class="incoming__pulse" aria-hidden="true" />
-        <h2 id="incoming-call-title" class="incoming__title">Входящий видеозвонок</h2>
+        <h2 id="incoming-call-title" class="incoming__title">{{ t('calls.incomingVideo') }}</h2>
         <p id="incoming-call-caller" class="incoming__caller">
           {{ callStore.counterpart?.name }}
           <span class="incoming__email">
             {{
               callStore.counterpart?.is_guest
-                ? 'Гость по вашей ссылке'
+                ? t('calls.guestByLink')
                 : callStore.counterpart?.username && `@${callStore.counterpart.username}`
             }}
           </span>
         </p>
         <div class="incoming__actions">
           <BaseButton variant="danger" icon="phone-off" @click="callStore.reject()">
-            Отклонить
+            {{ t('calls.decline') }}
           </BaseButton>
           <BaseButton variant="success" icon="video" @click="callStore.accept()">
-            Принять
+            {{ t('calls.accept') }}
           </BaseButton>
         </div>
         <button type="button" class="incoming__audio" @click="callStore.accept({ video: false })">
-          Ответить без видео
+          {{ t('calls.acceptAudio') }}
         </button>
       </div>
     </div>

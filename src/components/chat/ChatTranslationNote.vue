@@ -5,6 +5,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { ApiError } from '@/api/http'
+import { t } from '@/i18n'
 import { useChatStore } from '@/stores/chat'
 
 /** Совпадает с ChatTranslationNoteRequest::MAX_LENGTH на бэкенде */
@@ -60,7 +61,7 @@ async function save(): Promise<void> {
     await chatStore.setTranslationNote(props.chatId, draft.value)
     open.value = false
   } catch (reason) {
-    error.value = reason instanceof ApiError ? reason.message : 'Не удалось сохранить заметку.'
+    error.value = reason instanceof ApiError ? reason.message : t('chats.translation.noteFailed')
   } finally {
     saving.value = false
   }
@@ -73,8 +74,8 @@ async function save(): Promise<void> {
       type="button"
       class="note__trigger"
       :class="{ 'note__trigger--active': note !== null }"
-      aria-label="Заметка для перевода"
-      title="Заметка для перевода"
+      :aria-label="t('chats.translation.noteTitle')"
+      :title="t('chats.translation.noteTitle')"
       aria-haspopup="dialog"
       :aria-expanded="open"
       @click="open = !open"
@@ -85,23 +86,25 @@ async function save(): Promise<void> {
       v-if="open"
       class="note__popup"
       role="dialog"
-      aria-label="Заметка для перевода"
+      :aria-label="t('chats.translation.noteTitle')"
       @submit.prevent="save"
     >
-      <label class="note__label" for="translation-note">Кто вы друг другу?</label>
+      <label class="note__label" for="translation-note">
+        {{ t('chats.translation.noteLabel') }}
+      </label>
       <textarea
         id="translation-note"
         v-model="draft"
         class="note__input"
         rows="3"
         :maxlength="MAX_NOTE_LENGTH"
-        placeholder="Например: бабушка и внук"
+        :placeholder="t('chats.translation.notePlaceholder')"
       />
       <p class="note__hint">
-        Переводчик выберет по ней обращения. Заметку видят все участники чата.
+        {{ t('chats.translation.noteHint') }}
       </p>
       <FormAlert v-if="error" :message="error" />
-      <BaseButton type="submit" :loading="saving">Сохранить</BaseButton>
+      <BaseButton type="submit" :loading="saving">{{ t('common.save') }}</BaseButton>
     </form>
   </div>
 </template>

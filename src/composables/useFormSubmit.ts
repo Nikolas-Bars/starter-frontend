@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
 import { ApiError } from '@/api/http'
+import { t } from '@/i18n'
 import type { ValidationErrors } from '@/types/api'
 
 /**
@@ -28,7 +29,7 @@ export function useFormSubmit() {
         message.value = error.message
         fieldErrors.value = error.errors
       } else {
-        message.value = 'Что-то пошло не так. Попробуйте ещё раз.'
+        message.value = t('errors.unknown')
       }
       return false
     } finally {

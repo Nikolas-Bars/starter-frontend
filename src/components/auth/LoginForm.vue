@@ -5,6 +5,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useFormSubmit } from '@/composables/useFormSubmit'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const emit = defineEmits<{ success: [] }>()
@@ -30,7 +31,7 @@ async function onSubmit(): Promise<void> {
 
     <BaseInput
       v-model="form.email"
-      label="Email"
+      :label="t('auth.email')"
       type="email"
       autocomplete="email"
       required
@@ -38,14 +39,14 @@ async function onSubmit(): Promise<void> {
     />
     <BaseInput
       v-model="form.password"
-      label="Пароль"
+      :label="t('auth.password')"
       type="password"
       autocomplete="current-password"
       required
       :error="fieldError('password')"
     />
 
-    <BaseButton type="submit" :loading="loading">Войти</BaseButton>
+    <BaseButton type="submit" :loading="loading">{{ t('auth.loginAction') }}</BaseButton>
   </form>
 </template>
 

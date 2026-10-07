@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { uploadAttachment } from '@/api/attachments'
 import { chatsApi } from '@/api/chats'
 import { ApiError } from '@/api/http'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import type {
@@ -187,7 +188,7 @@ export const useChatStore = defineStore('chat', () => {
       listLastPage.value = page.meta.last_page
       listLoaded.value = true
     } catch {
-      listError.value = 'Не удалось загрузить чаты.'
+      listError.value = t('chats.errors.loadChats')
     } finally {
       listLoading.value = false
     }
@@ -204,7 +205,7 @@ export const useChatStore = defineStore('chat', () => {
       listPage.value = page.meta.current_page
       listLastPage.value = page.meta.last_page
     } catch {
-      listError.value = 'Не удалось загрузить чаты.'
+      listError.value = t('chats.errors.loadChats')
     } finally {
       listLoading.value = false
     }
@@ -242,7 +243,7 @@ export const useChatStore = defineStore('chat', () => {
       current.hasMore = page.has_more
       current.loaded = true
     } catch {
-      current.error = 'Не удалось загрузить сообщения.'
+      current.error = t('chats.errors.loadMessages')
     } finally {
       current.loading = false
     }
@@ -260,7 +261,7 @@ export const useChatStore = defineStore('chat', () => {
       current.messages = merge(page.items, current.messages)
       current.hasMore = page.has_more
     } catch {
-      current.error = 'Не удалось загрузить сообщения.'
+      current.error = t('chats.errors.loadMessages')
     } finally {
       current.loading = false
     }

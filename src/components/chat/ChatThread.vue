@@ -11,6 +11,7 @@ import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import { ApiError } from '@/api/http'
@@ -72,12 +73,12 @@ const peerTyping = computed(() => chatStore.isTyping(props.chatId))
 
 const status = computed(() => {
   if (peerTyping.value) {
-    return 'печатает…'
+    return t('chats.typing')
   }
   if (peerOnline.value) {
-    return 'в сети'
+    return t('presence.onlineLower')
   }
-  return peer.value?.username ? `@${peer.value.username}` : 'не в сети'
+  return peer.value?.username ? `@${peer.value.username}` : t('presence.offlineLower')
 })
 
 const canCall = computed(() => peer.value !== null && !callStore.isBusy && callStore.isOnline)
@@ -165,14 +166,14 @@ function onDrop(event: DragEvent): void {
 }
 
 async function deleteMessage(message: ThreadMessage): Promise<void> {
-  if (!window.confirm('Удалить сообщение у всех? Его файлы тоже удалятся.')) {
+  if (!window.confirm(t('chats.message.deleteConfirm'))) {
     return
   }
   actionError.value = ''
   try {
     await chatStore.deleteMessage(props.chatId, message.id)
   } catch (error) {
-    actionError.value = error instanceof ApiError ? error.message : 'Не удалось удалить сообщение.'
+    actionError.value = error instanceof ApiError ? error.message : t('chats.message.deleteFailed')
   }
 }
 
@@ -191,7 +192,7 @@ async function saveEdit(text: string): Promise<void> {
   try {
     await chatStore.editMessage(props.chatId, target.id, text)
   } catch (error) {
-    actionError.value = error instanceof ApiError ? error.message : 'Не удалось изменить сообщение.'
+    actionError.value = error instanceof ApiError ? error.message : t('chats.edit.failed')
   }
 }
 
@@ -245,7 +246,7 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="thread"
-    :aria-label="peer ? `Переписка с ${peer.name}` : 'Переписка'"
+    :aria-label="peer ? t('chats.thread.labelWith', { name: peer.name }) : t('chats.thread.label')"
     @pointerdown="markReadOnInteraction"
     @keydown="markReadOnInteraction"
     @dragenter.prevent="onDragEnter"
@@ -254,10 +255,10 @@ onBeforeUnmount(() => {
     @drop.prevent="onDrop"
   >
     <div v-if="dragDepth > 0" class="thread__drop" aria-hidden="true">
-      Отпустите, чтобы прикрепить
+      {{ t('chats.thread.dropHint') }}
     </div>
     <header class="thread__header">
-      <RouterLink class="thread__back" :to="{ name: 'chats' }" aria-label="К списку чатов">
+      <RouterLink class="thread__back" :to="{ name: 'chats' }" :aria-label="t('chats.thread.back')">
         <BaseIcon name="arrow-left" />
       </RouterLink>
       <template v-if="peer">
@@ -279,8 +280,8 @@ onBeforeUnmount(() => {
             icon="phone"
             class="thread__call"
             :disabled="!canCall"
-            :aria-label="`Позвонить без видео: ${peer.name}`"
-            title="Позвонить без видео"
+            :aria-label="t('calls.audioCallTo', { name: peer.name })"
+            :title="t('calls.audioCall')"
             @click="callStore.startCall(peer, { video: false })"
           />
           <BaseButton
@@ -288,26 +289,28 @@ onBeforeUnmount(() => {
             icon="video"
             class="thread__call"
             :disabled="!canCall"
-            :aria-label="`Видеозвонок: ${peer.name}`"
-            title="Видеозвонок"
+            :aria-label="t('calls.videoCallTo', { name: peer.name })"
+            :title="t('calls.videoCall')"
             @click="callStore.startCall(peer)"
           />
         </div>
       </template>
       <span v-else-if="chatStore.listLoaded || thread?.loaded" class="thread__name">
-        Чат не найден
+        {{ t('chats.errors.notFound') }}
       </span>
     </header>
 
     <div ref="scroller" class="thread__scroller" @scroll.passive="onScroll">
       <div class="thread__messages">
-        <p v-if="thread?.loading && messages.length === 0" class="thread__hint">Загружаем…</p>
+        <p v-if="thread?.loading && messages.length === 0" class="thread__hint">
+          {{ t('common.loading') }}
+        </p>
         <FormAlert v-if="thread?.error" :message="thread.error" />
         <p v-if="thread?.loaded && messages.length === 0" class="thread__hint">
-          Сообщений пока нет. Напишите первым!
+          {{ t('chats.thread.empty') }}
         </p>
         <p v-if="thread?.loading && messages.length > 0" class="thread__hint">
-          Загружаем сообщения постарше…
+          {{ t('chats.thread.loadingOlder') }}
         </p>
 
         <template v-for="group in groups" :key="group.key">

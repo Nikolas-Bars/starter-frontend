@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { callsApi } from '@/api/calls'
 import { ApiError } from '@/api/http'
 import { MediaAccessError, usePeerConnection } from '@/composables/usePeerConnection'
+import { t } from '@/i18n'
 import { defaultSignalingUrl, SignalingSocket, type SocketStatus } from '@/realtime/socket'
 import { useAuthStore } from '@/stores/auth'
 import { useCallSettingsStore } from '@/stores/callSettings'
@@ -127,7 +128,7 @@ export const useCallStore = defineStore('call', () => {
       return
     }
 
-    finish('Соединение с сервером звонков потеряно')
+    finish(t('calls.end.socketLost'))
   })
 
   /** Остальные события сокета (чаты) обрабатывают другие сторы — через onServerMessage */
@@ -208,7 +209,7 @@ export const useCallStore = defineStore('call', () => {
     }
 
     if (!socket.send({ type: 'call.invite', data: { callee_id: user.id } })) {
-      fail('Нет связи с сервером звонков. Попробуйте через несколько секунд.')
+      fail(t('calls.errors.noConnection'))
     }
   }
 
@@ -250,7 +251,7 @@ export const useCallStore = defineStore('call', () => {
     if (call.value === null) {
       // Сервер ещё не подтвердил вызов: отменяем локально, а пришедший call.ringing сбросим
       hungUpLocally = true
-      finish('Вызов отменён')
+      finish(t('calls.end.cancelled'))
       return
     }
 
@@ -266,7 +267,7 @@ export const useCallStore = defineStore('call', () => {
       await peer.setCameraEnabled(!peer.cameraEnabled.value)
     } catch (reason) {
       error.value =
-        reason instanceof MediaAccessError ? reason.message : 'Не удалось включить камеру.'
+        reason instanceof MediaAccessError ? reason.message : t('calls.errors.cameraFailed')
     }
   }
 
@@ -284,8 +285,8 @@ export const useCallStore = defineStore('call', () => {
       }
       error.value =
         reason instanceof MediaAccessError
-          ? 'Этот браузер не умеет показывать экран.'
-          : 'Не удалось показать экран.'
+          ? t('calls.errors.screenUnsupported')
+          : t('calls.errors.screenFailed')
     }
   }
 
@@ -309,7 +310,7 @@ export const useCallStore = defineStore('call', () => {
       await peer.switchDevice(kind === 'audioinput' ? 'audio' : 'video', deviceId)
     } catch (reason) {
       error.value =
-        reason instanceof MediaAccessError ? reason.message : 'Не удалось переключить устройство.'
+        reason instanceof MediaAccessError ? reason.message : t('calls.errors.deviceFailed')
     }
   }
 
@@ -484,7 +485,7 @@ export const useCallStore = defineStore('call', () => {
           fail(message.data.message)
         } else if (message.data.request === 'call.resume' && socketLost.value) {
           // Пока нас не было, сервер уже завершил звонок
-          finish('Звонок завершён')
+          finish(t('calls.end.ended'))
         } else {
           error.value = message.data.message
         }
@@ -559,7 +560,7 @@ export const useCallStore = defineStore('call', () => {
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null
       if (socketLost.value) {
-        finish('Соединение с сервером звонков потеряно')
+        finish(t('calls.end.socketLost'))
       } else {
         connectionFailed()
       }
@@ -576,7 +577,7 @@ export const useCallStore = defineStore('call', () => {
   function endByMe(type: 'call.reject' | 'call.hangup', callId: number): void {
     hungUpLocally = true
     if (!socket.send({ type, data: { call_id: callId } })) {
-      finish('Звонок завершён')
+      finish(t('calls.end.ended'))
     }
   }
 
@@ -584,7 +585,7 @@ export const useCallStore = defineStore('call', () => {
     if (call.value !== null) {
       socket.send({ type: 'call.hangup', data: { call_id: call.value.id } })
     }
-    finish('Не удалось соединиться с собеседником. Возможно, мешает сеть — попробуйте позже.')
+    finish(t('calls.end.connectionFailed'))
   }
 
   function rememberMissed(callId: number): void {
@@ -598,24 +599,24 @@ export const useCallStore = defineStore('call', () => {
 
     if (hungUpLocally) {
       if (endedCall.answered_at !== null) {
-        return 'Звонок завершён'
+        return t('calls.end.ended')
       }
-      return iAmCaller ? 'Вызов отменён' : 'Вызов отклонён'
+      return t(iAmCaller ? 'calls.end.cancelled' : 'calls.end.declined')
     }
 
     switch (reason) {
       case 'rejected':
-        return 'Собеседник отклонил звонок'
+        return t('calls.end.rejected')
       case 'missed':
-        return iAmCaller ? 'Собеседник не ответил' : 'Пропущенный звонок'
+        return t(iAmCaller ? 'calls.end.noAnswer' : 'calls.end.missed')
       case 'busy':
-        return 'Собеседник сейчас разговаривает'
+        return t('calls.end.busy')
       case 'unavailable':
-        return 'Собеседник не в сети'
+        return t('calls.end.unavailable')
       case 'answered_elsewhere':
-        return 'Звонок принят на другом устройстве'
+        return t('calls.end.answeredElsewhere')
       case 'ended':
-        return 'Собеседник завершил звонок'
+        return t('calls.end.peerEnded')
     }
   }
 
@@ -642,7 +643,7 @@ export const useCallStore = defineStore('call', () => {
     } else if (reason instanceof MediaAccessError) {
       error.value = reason.message
     } else {
-      error.value = 'Не удалось начать звонок.'
+      error.value = t('calls.errors.startFailed')
     }
   }
 

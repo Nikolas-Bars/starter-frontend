@@ -1,3 +1,5 @@
+import { intlLocale, t } from '@/i18n'
+
 /** 75 → «1:15», 3725 → «1:02:05» */
 export function formatDuration(totalSeconds: number): string {
   const seconds = Math.max(0, Math.floor(totalSeconds))
@@ -8,35 +10,36 @@ export function formatDuration(totalSeconds: number): string {
   return hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}:${rest}` : `${minutes}:${rest}`
 }
 
-const dateTimeFormat = new Intl.DateTimeFormat('ru-RU', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-})
+const FORMATS = {
+  dateTime: { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' },
+  time: { hour: '2-digit', minute: '2-digit' },
+  shortDate: { day: 'numeric', month: 'short' },
+  fullDate: { day: '2-digit', month: '2-digit', year: 'numeric' },
+  day: { day: 'numeric', month: 'long' },
+  dayWithYear: { day: 'numeric', month: 'long', year: 'numeric' },
+} satisfies Record<string, Intl.DateTimeFormatOptions>
+
+const formatters = new Map<string, Intl.DateTimeFormat>()
+
+/** Форматтер на текущем языке: создание дорогое, поэтому по одному на язык и формат */
+function formatter(name: keyof typeof FORMATS): Intl.DateTimeFormat {
+  const tag = intlLocale()
+  const key = `${tag}:${name}`
+  let format = formatters.get(key)
+  if (format === undefined) {
+    format = new Intl.DateTimeFormat(tag, FORMATS[name])
+    formatters.set(key, format)
+  }
+  return format
+}
 
 export function formatDateTime(iso: string): string {
-  return dateTimeFormat.format(new Date(iso))
+  return formatter('dateTime').format(new Date(iso))
 }
-
-const timeFormat = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
 
 export function formatTime(iso: string): string {
-  return timeFormat.format(new Date(iso))
+  return formatter('time').format(new Date(iso))
 }
-
-const shortDateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
-const fullDateFormat = new Intl.DateTimeFormat('ru-RU', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-})
-const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
-const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-})
 
 function isSameDay(a: Date, b: Date): boolean {
   return (
@@ -50,27 +53,23 @@ function isSameDay(a: Date, b: Date): boolean {
 export function formatChatTime(iso: string, now: Date = new Date()): string {
   const date = new Date(iso)
   if (isSameDay(date, now)) {
-    return timeFormat.format(date)
+    return formatter('time').format(date)
   }
-  return date.getFullYear() === now.getFullYear()
-    ? shortDateFormat.format(date)
-    : fullDateFormat.format(date)
+  return formatter(date.getFullYear() === now.getFullYear() ? 'shortDate' : 'fullDate').format(date)
 }
 
 /** Разделитель дней в переписке: «Сегодня», «Вчера», «2 октября», «2 октября 2025 г.» */
 export function formatDay(iso: string, now: Date = new Date()): string {
   const date = new Date(iso)
   if (isSameDay(date, now)) {
-    return 'Сегодня'
+    return t('common.today')
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (isSameDay(date, yesterday)) {
-    return 'Вчера'
+    return t('common.yesterday')
   }
-  return date.getFullYear() === now.getFullYear()
-    ? dayFormat.format(date)
-    : dayWithYearFormat.format(date)
+  return formatter(date.getFullYear() === now.getFullYear() ? 'day' : 'dayWithYear').format(date)
 }
 
 /** Ключ дня для группировки сообщений */

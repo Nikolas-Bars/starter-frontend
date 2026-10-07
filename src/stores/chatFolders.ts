@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 import { ApiError } from '@/api/http'
 import { chatFoldersApi, chatsApi } from '@/api/chats'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import { useChatStore } from '@/stores/chat'
 import type { Chat, ChatFolder } from '@/types/api'
@@ -96,7 +97,7 @@ export const useChatFoldersStore = defineStore('chatFolders', () => {
         activeFolderId.value = null
       }
     } catch {
-      error.value = 'Не удалось загрузить папки.'
+      error.value = t('chats.folders.errors.load')
     }
   }
 
@@ -128,7 +129,7 @@ export const useChatFoldersStore = defineStore('chatFolders', () => {
       state.page = result.meta.current_page
       state.lastPage = result.meta.last_page
     } catch {
-      error.value = 'Не удалось загрузить чаты папки.'
+      error.value = t('chats.folders.errors.loadChats')
     } finally {
       state.loading = false
     }
@@ -140,7 +141,7 @@ export const useChatFoldersStore = defineStore('chatFolders', () => {
       folders.value = [...folders.value, await chatFoldersApi.create(name)]
       return ''
     } catch (exception) {
-      return errorText(exception, 'Не удалось создать папку.')
+      return errorText(exception, t('chats.folders.errors.create'))
     }
   }
 
@@ -150,7 +151,7 @@ export const useChatFoldersStore = defineStore('chatFolders', () => {
       replace(await chatFoldersApi.rename(folderId, name))
       return ''
     } catch (exception) {
-      return errorText(exception, 'Не удалось переименовать папку.')
+      return errorText(exception, t('chats.folders.errors.rename'))
     }
   }
 
@@ -164,7 +165,7 @@ export const useChatFoldersStore = defineStore('chatFolders', () => {
       }
       return ''
     } catch (exception) {
-      return errorText(exception, 'Не удалось удалить папку.')
+      return errorText(exception, t('chats.folders.errors.remove'))
     }
   }
 
@@ -185,7 +186,7 @@ export const useChatFoldersStore = defineStore('chatFolders', () => {
       )
     } catch {
       folder.chat_ids = previous
-      error.value = 'Не удалось изменить папку.'
+      error.value = t('chats.folders.errors.toggle')
     }
   }
 
