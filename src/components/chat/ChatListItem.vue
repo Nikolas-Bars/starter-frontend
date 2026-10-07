@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 
 import BaseAvatar from '@/components/ui/BaseAvatar.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCallStore } from '@/stores/call'
 import { useChatStore } from '@/stores/chat'
@@ -21,7 +22,7 @@ const auth = useAuthStore()
 const callStore = useCallStore()
 const chatStore = useChatStore()
 
-const name = computed(() => props.chat.peer?.name ?? 'Удалённый пользователь')
+const name = computed(() => props.chat.peer?.name ?? t('chats.deletedUser'))
 const lastMessage = computed(() => props.chat.last_message)
 const mine = computed(() => lastMessage.value?.user_id === auth.user?.id)
 const read = computed(
@@ -68,21 +69,21 @@ const lastCall = computed(() => {
             'item__preview--missed': lastCall?.missed && !typing,
           }"
         >
-          <template v-if="typing">печатает…</template>
+          <template v-if="typing">{{ t('chats.typing') }}</template>
           <template v-else-if="lastCall">
             <BaseIcon name="phone" class="item__call-icon" />
             {{ lastCall.text }}
           </template>
           <template v-else-if="lastMessage">
-            <span v-if="mine" class="item__you">Вы:</span>
+            <span v-if="mine" class="item__you">{{ t('chats.you') }}</span>
             {{ messagePreview(lastMessage) }}
           </template>
-          <template v-else>Нет сообщений</template>
+          <template v-else>{{ t('chats.noMessages') }}</template>
         </span>
         <span
           v-if="chat.unread_count > 0"
           class="item__badge"
-          :aria-label="`Непрочитанных: ${chat.unread_count}`"
+          :aria-label="t('chats.unread', { count: chat.unread_count })"
         >
           {{ chat.unread_count > 99 ? '99+' : chat.unread_count }}
         </span>

@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import ChatVoicePlayer from '@/components/chat/ChatVoicePlayer.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import { apiUrl } from '@/api/http'
+import { t } from '@/i18n'
 import { useChatStore, type LocalUpload } from '@/stores/chat'
 import type { ChatAttachment } from '@/types/api'
 import { formatFileSize } from '@/utils/chatAttachment'
@@ -71,9 +72,9 @@ function overlay(item: Item): string | null {
   }
   switch (item.attachment.status) {
     case 'processing':
-      return 'Сжимаем…'
+      return t('chats.attachments.processing')
     case 'failed':
-      return 'Не удалось обработать'
+      return t('chats.attachments.failed')
     default:
       return null
   }
@@ -96,7 +97,7 @@ function overlay(item: Item): string | null {
             target="_blank"
             rel="noopener"
             class="media__link"
-            :aria-label="`Открыть фото ${item.attachment.name}`"
+            :aria-label="t('chats.attachments.openPhoto', { name: item.attachment.name })"
           >
             <img class="media__content" :src="thumb(item.attachment)!" alt="" loading="lazy" />
           </a>

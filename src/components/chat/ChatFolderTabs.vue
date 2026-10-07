@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseIcon from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { useChatFoldersStore } from '@/stores/chatFolders'
 
 const folderStore = useChatFoldersStore()
@@ -10,7 +11,7 @@ function badge(count: number): string {
 </script>
 
 <template>
-  <div class="tabs" role="tablist" aria-label="Папки чатов">
+  <div class="tabs" role="tablist" :aria-label="t('chats.folders.tabsLabel')">
     <button
       type="button"
       role="tab"
@@ -19,7 +20,7 @@ function badge(count: number): string {
       :aria-selected="folderStore.activeFolderId === null"
       @click="folderStore.select(null)"
     >
-      Все
+      {{ t('chats.folders.all') }}
       <span v-if="folderStore.allUnreadChats > 0" class="tabs__badge">
         {{ badge(folderStore.allUnreadChats) }}
       </span>
@@ -42,12 +43,14 @@ function badge(count: number): string {
     <button
       type="button"
       class="tabs__manage"
-      :aria-label="folderStore.folders.length === 0 ? 'Создать папку' : 'Настроить папки'"
-      :title="folderStore.folders.length === 0 ? 'Создать папку' : 'Настроить папки'"
+      :aria-label="
+        t(folderStore.folders.length === 0 ? 'chats.folders.create' : 'chats.folders.manage')
+      "
+      :title="t(folderStore.folders.length === 0 ? 'chats.folders.create' : 'chats.folders.manage')"
       @click="folderStore.managerOpen = true"
     >
       <BaseIcon :name="folderStore.folders.length === 0 ? 'plus' : 'sliders'" />
-      <span v-if="folderStore.folders.length === 0">Папка</span>
+      <span v-if="folderStore.folders.length === 0">{{ t('chats.folders.folder') }}</span>
     </button>
   </div>
 </template>

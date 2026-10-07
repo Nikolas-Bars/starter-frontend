@@ -5,6 +5,7 @@ import CallChat from '@/components/call/CallChat.vue'
 import CallControl from '@/components/call/CallControl.vue'
 import CallDevices from '@/components/call/CallDevices.vue'
 import { useWakeLock } from '@/composables/useWakeLock'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import { useCallSettingsStore } from '@/stores/callSettings'
 import { formatDuration } from '@/utils/format'
@@ -81,12 +82,12 @@ watch(
 const status = computed(() => {
   switch (callStore.phase) {
     case 'outgoing':
-      return callStore.call === null ? 'Подключаемся…' : 'Вызываем…'
+      return t(callStore.call === null ? 'calls.status.connecting' : 'calls.status.calling')
     case 'connecting':
-      return 'Устанавливаем соединение…'
+      return t('calls.status.establishing')
     case 'active':
       if (callStore.reconnecting) {
-        return 'Связь прервалась, восстанавливаем…'
+        return t('calls.status.reconnecting')
       }
       return formatDuration(
         callStore.activeSince === null ? 0 : (now.value - callStore.activeSince) / 1000,
@@ -120,9 +121,9 @@ const remoteNotice = computed(() => {
     return ''
   }
   if (media.screen) {
-    return 'Собеседник показывает экран'
+    return t('calls.peerSharingScreen')
   }
-  return media.mic ? '' : 'Собеседник выключил микрофон'
+  return media.mic ? '' : t('calls.peerMuted')
 })
 
 const quality = computed(() => {
@@ -130,13 +131,16 @@ const quality = computed(() => {
   if (callStore.phase !== 'active' || stats === null) {
     return null
   }
-  const labels = { good: 'Хорошая связь', fair: 'Средняя связь', poor: 'Плохая связь' }
   const details = [
-    stats.roundTripMs === null ? null : `задержка ${stats.roundTripMs} мс`,
-    `потери ${stats.packetLossPercent}%`,
-    stats.relayed ? 'через TURN-сервер' : 'напрямую',
+    stats.roundTripMs === null ? null : t('calls.quality.latency', { ms: stats.roundTripMs }),
+    t('calls.quality.loss', { percent: stats.packetLossPercent }),
+    t(stats.relayed ? 'calls.quality.relayed' : 'calls.quality.direct'),
   ].filter(Boolean)
-  return { level: stats.quality, label: labels[stats.quality], details: details.join(', ') }
+  return {
+    level: stats.quality,
+    label: t(`calls.quality.${stats.quality}`),
+    details: details.join(', '),
+  }
 })
 
 function togglePanel(next: Exclude<Panel, null>): void {
@@ -220,7 +224,7 @@ onBeforeUnmount(() => {
       :class="{ 'call--swapped': swapped && canSwap }"
       role="dialog"
       aria-modal="true"
-      aria-label="Видеозвонок"
+      :aria-label="t('calls.videoCall')"
     >
       <div class="call__stage">
         <video
@@ -263,7 +267,7 @@ onBeforeUnmount(() => {
         <p v-if="callStore.error && inCall" class="call__error" role="alert">
           {{ callStore.error }}
           <button type="button" class="call__error-close" @click="callStore.clearError()">
-            Скрыть
+            {{ t('common.hide') }}
           </button>
         </p>
 
@@ -274,7 +278,7 @@ onBeforeUnmount(() => {
           autoplay
           playsinline
           muted
-          :title="canSwap ? 'Поменять местами' : undefined"
+          :title="canSwap ? t('calls.swap') : undefined"
           @click="canSwap && (swapped = !swapped)"
         />
 
@@ -286,13 +290,13 @@ onBeforeUnmount(() => {
 
       <footer class="call__controls">
         <template v-if="callStore.phase === 'ended'">
-          <CallControl icon="close" label="Закрыть" @click="callStore.dismiss()" />
+          <CallControl icon="close" :label="t('common.close')" @click="callStore.dismiss()" />
         </template>
         <template v-else>
           <CallControl
             :icon="callStore.micEnabled ? 'mic' : 'mic-off'"
-            label="Микрофон"
-            :hint="callStore.micEnabled ? 'Выключить микрофон' : 'Включить микрофон'"
+            :label="t('calls.controls.mic')"
+            :hint="t(callStore.micEnabled ? 'calls.controls.micOff' : 'calls.controls.micOn')"
             :active="!callStore.micEnabled"
             :aria-pressed="!callStore.micEnabled"
             aria-keyshortcuts="M"
@@ -300,8 +304,10 @@ onBeforeUnmount(() => {
           />
           <CallControl
             :icon="callStore.cameraEnabled ? 'video' : 'video-off'"
-            label="Камера"
-            :hint="callStore.cameraEnabled ? 'Выключить камеру' : 'Включить камеру'"
+            :label="t('calls.controls.camera')"
+            :hint="
+              t(callStore.cameraEnabled ? 'calls.controls.cameraOff' : 'calls.controls.cameraOn')
+            "
             :active="!callStore.cameraEnabled"
             :aria-pressed="!callStore.cameraEnabled"
             aria-keyshortcuts="V"
@@ -310,8 +316,14 @@ onBeforeUnmount(() => {
           <CallControl
             v-if="canShareScreen"
             icon="screen-share"
-            label="Экран"
-            :hint="callStore.screenSharing ? 'Остановить показ' : 'Показать экран'"
+            :label="t('calls.controls.screen')"
+            :hint="
+              t(
+                callStore.screenSharing
+                  ? 'calls.controls.screenStop'
+                  : 'calls.controls.screenStart',
+              )
+            "
             :active="callStore.screenSharing"
             :disabled="callStore.phase !== 'active'"
             :aria-pressed="callStore.screenSharing"
@@ -319,8 +331,12 @@ onBeforeUnmount(() => {
           />
           <CallControl
             icon="chat"
-            label="Чат"
-            :hint="callStore.unreadChat > 0 ? `Чат, непрочитанных: ${callStore.unreadChat}` : 'Чат'"
+            :label="t('calls.controls.chat')"
+            :hint="
+              callStore.unreadChat > 0
+                ? t('calls.controls.chatUnread', { count: callStore.unreadChat })
+                : t('calls.controls.chat')
+            "
             :active="panel === 'chat'"
             :badge="callStore.unreadChat"
             :disabled="callStore.phase !== 'active'"
@@ -330,7 +346,7 @@ onBeforeUnmount(() => {
           />
           <CallControl
             icon="sliders"
-            label="Устройства"
+            :label="t('calls.devices.title')"
             :active="panel === 'devices'"
             :aria-pressed="panel === 'devices'"
             @click="togglePanel('devices')"
@@ -338,20 +354,27 @@ onBeforeUnmount(() => {
           <CallControl
             v-if="canPictureInPicture && showRemoteVideo"
             icon="pip"
-            label="Окно"
-            hint="Картинка в картинке"
+            :label="t('calls.controls.pip')"
+            :hint="t('calls.controls.pipHint')"
             @click="togglePictureInPicture()"
           />
           <CallControl
             v-if="canFullscreen"
             :icon="fullscreen ? 'minimize' : 'maximize'"
-            :label="fullscreen ? 'Свернуть' : 'Весь экран'"
-            :hint="fullscreen ? 'Свернуть' : 'На весь экран'"
+            :label="t(fullscreen ? 'calls.controls.exitFullscreen' : 'calls.controls.fullscreen')"
+            :hint="
+              t(fullscreen ? 'calls.controls.exitFullscreen' : 'calls.controls.fullscreenHint')
+            "
             :aria-pressed="fullscreen"
             aria-keyshortcuts="F"
             @click="toggleFullscreen()"
           />
-          <CallControl icon="phone-off" label="Завершить" danger @click="callStore.hangup()" />
+          <CallControl
+            icon="phone-off"
+            :label="t('calls.controls.hangup')"
+            danger
+            @click="callStore.hangup()"
+          />
         </template>
       </footer>
     </div>

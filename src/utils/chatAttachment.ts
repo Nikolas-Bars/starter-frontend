@@ -1,3 +1,4 @@
+import { intlLocale, t } from '@/i18n'
 import type { ChatAttachmentKind, ChatMessage } from '@/types/api'
 import { displayBody } from '@/utils/chatTranslation'
 
@@ -28,24 +29,27 @@ export function guessKind(file: File, asFile = false): ChatAttachmentKind {
   return file.type.startsWith('video/') ? 'video' : 'file'
 }
 
+const SIZE_UNITS = ['b', 'kb', 'mb', 'gb'] as const
+
 /** 1536 → «1,5 КБ» */
 export function formatFileSize(bytes: number): string {
-  const units = ['Б', 'КБ', 'МБ', 'ГБ']
   let value = bytes
   let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
+  while (value >= 1024 && unit < SIZE_UNITS.length - 1) {
     value /= 1024
     unit += 1
   }
   const digits = unit === 0 || value >= 10 ? 0 : 1
-  return `${value.toFixed(digits).replace('.', ',')} ${units[unit]}`
+  const number = new Intl.NumberFormat(intlLocale(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    useGrouping: false,
+  }).format(value)
+  return `${number} ${t(`units.${SIZE_UNITS[unit]!}`)}`
 }
 
-const KIND_LABELS: Record<ChatAttachmentKind, string> = {
-  image: 'Фото',
-  video: 'Видео',
-  voice: 'Голосовое сообщение',
-  file: 'Файл',
+function kindLabel(kind: ChatAttachmentKind): string {
+  return t(`chats.attachments.kind.${kind}`)
 }
 
 /**
@@ -58,19 +62,22 @@ export function messagePreview(
   const attachments = message.attachments ?? []
   const body = displayBody(message)
   if (attachments.length === 0) {
-    return body === '' ? 'Файл удалён' : body
+    return body === '' ? t('chats.attachments.removed') : body
   }
 
   const first = attachments[0]!
   const sameKind = attachments.every((attachment) => attachment.kind === first.kind)
   let label: string
   if (attachments.length === 1) {
-    label = first.kind === 'file' ? first.name : KIND_LABELS[first.kind]
+    label = first.kind === 'file' ? first.name : kindLabel(first.kind)
   } else {
     label =
       sameKind && first.kind !== 'file'
-        ? `${KIND_LABELS[first.kind]}: ${attachments.length}`
-        : `Файлы: ${attachments.length}`
+        ? t('chats.attachments.kindCount', {
+            kind: kindLabel(first.kind),
+            count: attachments.length,
+          })
+        : t('chats.attachments.files', { count: attachments.length })
   }
 
   return body === '' ? label : `${label} · ${body}`

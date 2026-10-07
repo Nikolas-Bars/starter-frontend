@@ -7,6 +7,7 @@ import ChatSidebar from '@/components/chat/ChatSidebar.vue'
 import ChatThread from '@/components/chat/ChatThread.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import { useChatStore } from '@/stores/chat'
 import { useChatFoldersStore } from '@/stores/chatFolders'
@@ -37,7 +38,7 @@ onMounted(() => {
       <div v-if="callStore.error" class="messenger__error">
         <FormAlert :message="callStore.error" />
         <button type="button" class="messenger__error-close" @click="callStore.clearError()">
-          Скрыть
+          {{ t('common.hide') }}
         </button>
       </div>
       <ChatThread
@@ -48,7 +49,7 @@ onMounted(() => {
       />
       <div v-else class="messenger__placeholder">
         <BaseIcon name="chat" class="messenger__placeholder-icon" />
-        <p>Выберите чат или найдите собеседника по нику</p>
+        <p>{{ t('chats.placeholder') }}</p>
       </div>
     </div>
   </section>

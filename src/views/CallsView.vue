@@ -8,6 +8,7 @@ import UserList from '@/components/call/UserList.vue'
 import BaseIcon from '@/components/ui/BaseIcon.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
 import { useNotificationPermission } from '@/composables/useCallAttention'
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import { useCallSettingsStore } from '@/stores/callSettings'
 
@@ -37,26 +38,14 @@ onBeforeUnmount(() => {
   window.removeEventListener('focus', markMissedSeen)
 })
 
-function missedText(count: number): string {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  const word =
-    mod10 === 1 && mod100 !== 11
-      ? 'пропущенный звонок'
-      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
-        ? 'пропущенных звонка'
-        : 'пропущенных звонков'
-  return `У вас ${count} ${word}`
-}
-
 const connection = computed(() => {
   switch (callStore.socketStatus) {
     case 'open':
-      return { text: 'Онлайн — вам могут позвонить', online: true }
+      return { text: t('calls.connection.online'), online: true }
     case 'unauthorized':
-      return { text: 'Сессия истекла — войдите заново', online: false }
+      return { text: t('calls.connection.unauthorized'), online: false }
     default:
-      return { text: 'Подключаемся к серверу звонков…', online: false }
+      return { text: t('calls.connection.connecting'), online: false }
   }
 })
 </script>
@@ -65,7 +54,7 @@ const connection = computed(() => {
   <section class="calls">
     <header class="calls__header">
       <div>
-        <h1 class="calls__title">Видеозвонки</h1>
+        <h1 class="calls__title">{{ t('calls.title') }}</h1>
         <p class="calls__status" :class="{ 'calls__status--online': connection.online }">
           <span class="calls__dot" aria-hidden="true" />
           {{ connection.text }}
@@ -73,14 +62,14 @@ const connection = computed(() => {
       </div>
       <RouterLink class="calls__back" :to="{ name: 'chats' }">
         <BaseIcon name="arrow-left" />
-        К чатам
+        {{ t('calls.toChats') }}
       </RouterLink>
     </header>
 
     <div class="calls__settings">
       <label class="calls__toggle">
         <input v-model="settings.ringtoneMuted" type="checkbox" />
-        Входящие без звука
+        {{ t('calls.ringtoneMuted') }}
       </label>
       <button
         v-if="notifications.permission.value === 'default'"
@@ -88,22 +77,24 @@ const connection = computed(() => {
         class="calls__link"
         @click="notifications.requestPermission()"
       >
-        Уведомлять о звонках, когда вкладка в фоне
+        {{ t('calls.notifications.enable') }}
       </button>
       <span v-else-if="notifications.permission.value === 'denied'" class="calls__hint">
-        Уведомления о звонках запрещены в настройках браузера
+        {{ t('calls.notifications.denied') }}
       </span>
     </div>
 
     <p v-if="missedOnArrival > 0" class="calls__missed" role="status">
-      {{ missedText(missedOnArrival) }}
-      <button type="button" class="calls__link" @click="missedOnArrival = 0">Понятно</button>
+      {{ t('calls.missedCount', missedOnArrival) }}
+      <button type="button" class="calls__link" @click="missedOnArrival = 0">
+        {{ t('common.gotIt') }}
+      </button>
     </p>
 
     <div v-if="callStore.error" class="calls__error">
       <FormAlert :message="callStore.error" />
       <button type="button" class="calls__error-close" @click="callStore.clearError()">
-        Скрыть
+        {{ t('common.hide') }}
       </button>
     </div>
 

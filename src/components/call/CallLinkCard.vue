@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { callLinkUrl, callLinksApi } from '@/api/callLinks'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormAlert from '@/components/ui/FormAlert.vue'
+import { t } from '@/i18n'
 import type { CallLink } from '@/types/api'
 
 const COPIED_MS = 2000
@@ -22,7 +23,7 @@ onMounted(async () => {
   try {
     link.value = await callLinksApi.own()
   } catch {
-    error.value = 'Не удалось загрузить вашу ссылку для звонка.'
+    error.value = t('callLinks.loadFailed')
   }
 })
 
@@ -36,7 +37,7 @@ async function copy(): Promise<void> {
   try {
     await navigator.clipboard.writeText(url.value)
   } catch {
-    error.value = 'Браузер не дал скопировать — выделите ссылку и скопируйте вручную.'
+    error.value = t('callLinks.copyFailed')
     return
   }
   copied.value = true
@@ -48,11 +49,11 @@ async function copy(): Promise<void> {
 
 async function share(): Promise<void> {
   // Пользователь закрыл системное меню «Поделиться» — это не ошибка
-  await navigator.share({ title: 'Позвоните мне', url: url.value }).catch(() => undefined)
+  await navigator.share({ title: t('callLinks.shareTitle'), url: url.value }).catch(() => undefined)
 }
 
 async function rotate(): Promise<void> {
-  if (!window.confirm('Старая ссылка перестанет работать. Выпустить новую?')) {
+  if (!window.confirm(t('callLinks.rotateConfirm'))) {
     return
   }
   rotating.value = true
@@ -60,7 +61,7 @@ async function rotate(): Promise<void> {
   try {
     link.value = await callLinksApi.rotate()
   } catch {
-    error.value = 'Не удалось выпустить новую ссылку. Попробуйте ещё раз.'
+    error.value = t('callLinks.rotateFailed')
   } finally {
     rotating.value = false
   }
@@ -70,24 +71,26 @@ async function rotate(): Promise<void> {
 <template>
   <section class="call-link" aria-labelledby="call-link-title">
     <div class="call-link__text">
-      <h2 id="call-link-title" class="call-link__title">Ваша ссылка для звонка</h2>
-      <p class="call-link__hint">По ней вам позвонят без регистрации — из любого браузера.</p>
+      <h2 id="call-link-title" class="call-link__title">{{ t('callLinks.title') }}</h2>
+      <p class="call-link__hint">{{ t('callLinks.hint') }}</p>
     </div>
 
     <FormAlert :message="error" />
 
     <template v-if="link">
-      <p class="call-link__url" tabindex="0" aria-label="Ссылка для звонка">{{ url }}</p>
+      <p class="call-link__url" tabindex="0" :aria-label="t('callLinks.urlLabel')">{{ url }}</p>
       <div class="call-link__actions">
-        <BaseButton v-if="canShare" icon="share" @click="share()">Поделиться</BaseButton>
+        <BaseButton v-if="canShare" icon="share" @click="share()">
+          {{ t('callLinks.share') }}
+        </BaseButton>
         <BaseButton :variant="canShare ? 'ghost' : 'primary'" icon="copy" @click="copy()">
-          {{ copied ? 'Скопировано' : 'Скопировать' }}
+          {{ t(copied ? 'callLinks.copied' : 'callLinks.copy') }}
         </BaseButton>
         <BaseButton variant="ghost" :loading="rotating" @click="rotate()">
-          Новая ссылка
+          {{ t('callLinks.rotate') }}
         </BaseButton>
       </div>
-      <p class="visually-hidden" role="status">{{ copied ? 'Ссылка скопирована' : '' }}</p>
+      <p class="visually-hidden" role="status">{{ copied ? t('callLinks.copiedStatus') : '' }}</p>
     </template>
   </section>
 </template>

@@ -1,5 +1,7 @@
 import { apiUrl, ApiError } from '@/api/http'
 import { tokenStorage } from '@/api/tokenStorage'
+import { t } from '@/i18n'
+import { locale } from '@/i18n/locale'
 import type { ApiResponse, ChatAttachment } from '@/types/api'
 
 export interface UploadOptions {
@@ -33,7 +35,7 @@ export function uploadAttachment(
 
     xhr.open('POST', apiUrl('/api/attachments'))
     xhr.setRequestHeader('Accept', 'application/json')
-    xhr.setRequestHeader('Accept-Language', 'ru')
+    xhr.setRequestHeader('Accept-Language', locale.value)
     const token = tokenStorage.get()
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`)
@@ -57,14 +59,14 @@ export function uploadAttachment(
       }
       reject(
         new ApiError(
-          payload?.message || `Ошибка загрузки (${xhr.status})`,
+          payload?.message || t('errors.uploadFailed', { status: xhr.status }),
           xhr.status,
           payload?.errors ?? {},
         ),
       )
     }
-    xhr.onerror = () => reject(new ApiError('Сервер недоступен. Проверьте соединение.', 0))
-    xhr.onabort = () => reject(new ApiError('Загрузка отменена.', 0))
+    xhr.onerror = () => reject(new ApiError(t('errors.network'), 0))
+    xhr.onabort = () => reject(new ApiError(t('errors.uploadAborted'), 0))
 
     options.signal?.addEventListener('abort', () => xhr.abort(), { once: true })
     xhr.send(form)

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 
 import BaseIcon from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { formatDuration } from '@/utils/format'
 
 const BARS = 40
@@ -65,7 +66,7 @@ onBeforeUnmount(() => audio.value?.pause())
       type="button"
       class="voice__toggle"
       :disabled="src === null"
-      :aria-label="playing ? 'Пауза' : 'Слушать'"
+      :aria-label="t(playing ? 'chats.attachments.pause' : 'chats.attachments.play')"
       @click="toggle"
     >
       <BaseIcon :name="playing ? 'pause' : 'play'" />

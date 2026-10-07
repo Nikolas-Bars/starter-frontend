@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, useTemplateRef, watch } from 'vue'
 
+import { t } from '@/i18n'
 import { MAX_CHAT_MESSAGE_LENGTH, useCallStore } from '@/stores/call'
 import { formatTime } from '@/utils/format'
 
@@ -30,10 +31,15 @@ defineExpose({ focus: () => input.value?.focus() })
 </script>
 
 <template>
-  <aside class="chat" aria-label="Чат звонка">
+  <aside class="chat" :aria-label="t('calls.chat.label')">
     <header class="chat__header">
-      <h3 class="chat__title">Чат</h3>
-      <button type="button" class="chat__close" aria-label="Закрыть чат" @click="emit('close')">
+      <h3 class="chat__title">{{ t('calls.chat.title') }}</h3>
+      <button
+        type="button"
+        class="chat__close"
+        :aria-label="t('calls.chat.close')"
+        @click="emit('close')"
+      >
         ×
       </button>
     </header>
@@ -49,7 +55,7 @@ defineExpose({ focus: () => input.value?.focus() })
         <time class="chat__time" :datetime="message.sentAt">{{ formatTime(message.sentAt) }}</time>
       </li>
       <li v-if="callStore.chatMessages.length === 0" class="chat__empty">
-        Сообщения видны только участникам и не сохраняются после звонка.
+        {{ t('calls.chat.empty') }}
       </li>
     </ol>
 
@@ -60,11 +66,13 @@ defineExpose({ focus: () => input.value?.focus() })
         class="chat__input"
         type="text"
         :maxlength="MAX_CHAT_MESSAGE_LENGTH"
-        placeholder="Сообщение"
-        aria-label="Сообщение"
+        :placeholder="t('calls.chat.placeholder')"
+        :aria-label="t('calls.chat.placeholder')"
         :disabled="callStore.phase !== 'active'"
       />
-      <button type="submit" class="chat__send" :disabled="draft.trim() === ''">Отправить</button>
+      <button type="submit" class="chat__send" :disabled="draft.trim() === ''">
+        {{ t('common.send') }}
+      </button>
     </form>
   </aside>
 </template>

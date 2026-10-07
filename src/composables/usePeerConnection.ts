@@ -1,22 +1,13 @@
 import { readonly, ref, shallowRef } from 'vue'
 
+import { t } from '@/i18n'
 import type { MediaState, PeerMessage, SignalPayload, SignalType } from '@/types/call'
 
 export type MediaAccessReason = 'denied' | 'not-found' | 'busy' | 'unsupported' | 'unknown'
 
-const MEDIA_ACCESS_MESSAGES: Record<MediaAccessReason, string> = {
-  denied:
-    'Доступ к камере и микрофону запрещён. Разрешите его для сайта в браузере. На iPhone и iPad ' +
-    'проверьте ещё «Настройки» → ваш браузер → «Камера» и «Микрофон».',
-  'not-found': 'Не нашли камеру и микрофон. Проверьте, что они подключены.',
-  busy: 'Камера или микрофон заняты другим приложением. Закройте его и попробуйте снова.',
-  unsupported: 'Этот браузер не умеет звонить. Обновите его или откройте сайт в Chrome или Safari.',
-  unknown: 'Не удалось включить камеру и микрофон. Попробуйте ещё раз или перезапустите браузер.',
-}
-
 export class MediaAccessError extends Error {
   constructor(readonly reason: MediaAccessReason = 'unknown') {
-    super(MEDIA_ACCESS_MESSAGES[reason])
+    super(t(`calls.mediaErrors.${reason}`))
     this.name = 'MediaAccessError'
   }
 }

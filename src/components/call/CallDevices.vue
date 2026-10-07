@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+import { t } from '@/i18n'
 import { useCallStore } from '@/stores/call'
 import { useCallSettingsStore } from '@/stores/callSettings'
 
@@ -46,9 +47,11 @@ function selected(kind: MediaDeviceKind): string {
 
 const groups = computed(() =>
   [
-    { kind: 'audioinput' as const, label: 'Микрофон' },
-    { kind: 'videoinput' as const, label: 'Камера' },
-    ...(canChooseOutput ? [{ kind: 'audiooutput' as const, label: 'Динамик' }] : []),
+    { kind: 'audioinput' as const, label: t('calls.devices.mic') },
+    { kind: 'videoinput' as const, label: t('calls.devices.camera') },
+    ...(canChooseOutput
+      ? [{ kind: 'audiooutput' as const, label: t('calls.devices.speaker') }]
+      : []),
   ].map((group) => ({ ...group, options: byKind(group.kind) })),
 )
 
@@ -67,10 +70,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <aside class="devices" aria-label="Устройства">
+  <aside class="devices" :aria-label="t('calls.devices.title')">
     <header class="devices__header">
-      <h3 class="devices__title">Устройства</h3>
-      <button type="button" class="devices__close" aria-label="Закрыть" @click="emit('close')">
+      <h3 class="devices__title">{{ t('calls.devices.title') }}</h3>
+      <button
+        type="button"
+        class="devices__close"
+        :aria-label="t('common.close')"
+        @click="emit('close')"
+      >
         ×
       </button>
     </header>
@@ -83,7 +91,9 @@ onBeforeUnmount(() => {
         :disabled="group.options.length === 0"
         @change="onChange(group.kind, $event)"
       >
-        <option v-if="group.options.length === 0" value="default">Не найдено</option>
+        <option v-if="group.options.length === 0" value="default">
+          {{ t('calls.devices.notFound') }}
+        </option>
         <option
           v-for="(device, index) in group.options"
           :key="device.deviceId"

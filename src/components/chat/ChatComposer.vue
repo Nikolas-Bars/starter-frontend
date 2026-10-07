@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import BaseIcon from '@/components/ui/BaseIcon.vue'
+import { t } from '@/i18n'
 import { MAX_MESSAGE_LENGTH, type OutgoingFile } from '@/stores/chat'
 import {
   formatFileSize,
@@ -127,11 +128,14 @@ function addFiles(files: File[]): void {
   error.value = ''
   for (const file of files) {
     if (selected.value.length >= MAX_FILES_PER_MESSAGE) {
-      error.value = `В одном сообщении — не больше ${MAX_FILES_PER_MESSAGE} файлов.`
+      error.value = t('chats.attachments.tooMany', { count: MAX_FILES_PER_MESSAGE })
       break
     }
     if (file.size > MAX_FILE_BYTES) {
-      error.value = `«${file.name}» больше ${formatFileSize(MAX_FILE_BYTES)}.`
+      error.value = t('chats.attachments.tooBig', {
+        name: file.name,
+        size: formatFileSize(MAX_FILE_BYTES),
+      })
       continue
     }
     const preview =
@@ -217,7 +221,7 @@ async function startRecording(): Promise<void> {
   try {
     recordStream = await navigator.mediaDevices.getUserMedia({ audio: true })
   } catch {
-    error.value = 'Нет доступа к микрофону.'
+    error.value = t('chats.composer.noMicrophone')
     return
   }
   const type = VOICE_TYPES.find(({ mime }) => MediaRecorder.isTypeSupported(mime))
@@ -283,14 +287,14 @@ defineExpose({ addFiles })
     <div v-if="editing" class="editing">
       <BaseIcon name="edit" class="editing__icon" />
       <span class="editing__text">
-        <span class="editing__title">Редактирование</span>
+        <span class="editing__title">{{ t('chats.edit.title') }}</span>
         <span class="editing__body">{{ editing.body }}</span>
       </span>
       <button
         type="button"
         class="editing__close"
-        aria-label="Отменить редактирование"
-        title="Отменить (Esc)"
+        :aria-label="t('chats.edit.cancel')"
+        :title="t('chats.edit.cancelHint')"
         @click="emit('cancelEdit')"
       >
         <BaseIcon name="close" />
@@ -307,7 +311,7 @@ defineExpose({ addFiles })
           <button
             type="button"
             class="tray__remove"
-            :aria-label="`Убрать ${item.file.name}`"
+            :aria-label="t('chats.attachments.remove', { name: item.file.name })"
             @click="removeFile(index)"
           >
             <BaseIcon name="close" />
@@ -316,7 +320,7 @@ defineExpose({ addFiles })
       </div>
       <label v-if="hasMedia" class="tray__option">
         <input v-model="asFile" type="checkbox" />
-        Без сжатия (отправить файлом)
+        {{ t('chats.attachments.asFile') }}
       </label>
     </div>
     <p v-if="error" class="composer__error" role="alert">{{ error }}</p>
@@ -325,21 +329,21 @@ defineExpose({ addFiles })
       <button
         type="button"
         class="composer__icon"
-        aria-label="Отменить запись"
-        title="Отменить"
+        :aria-label="t('chats.composer.cancelRecording')"
+        :title="t('common.cancel')"
         @click="stopRecording(false)"
       >
         <BaseIcon name="trash" />
       </button>
       <span class="recording">
         <span class="recording__dot" aria-hidden="true" />
-        Запись {{ formatDuration(recordedMs / 1000) }}
+        {{ t('chats.composer.recording', { duration: formatDuration(recordedMs / 1000) }) }}
       </span>
       <button
         type="button"
         class="composer__send"
-        aria-label="Отправить голосовое"
-        title="Отправить"
+        :aria-label="t('chats.composer.sendVoice')"
+        :title="t('common.send')"
         @click="stopRecording(true)"
       >
         <BaseIcon name="send" />
@@ -351,8 +355,8 @@ defineExpose({ addFiles })
         v-if="!editing"
         type="button"
         class="composer__icon"
-        aria-label="Прикрепить файл"
-        title="Прикрепить файл"
+        :aria-label="t('chats.composer.attach')"
+        :title="t('chats.composer.attach')"
         @click="picker?.click()"
       >
         <BaseIcon name="paperclip" />
@@ -364,8 +368,14 @@ defineExpose({ addFiles })
         class="composer__input"
         rows="1"
         :maxlength="MAX_MESSAGE_LENGTH"
-        :placeholder="selected.length > 0 && !editing ? 'Подпись' : 'Сообщение'"
-        aria-label="Текст сообщения"
+        :placeholder="
+          t(
+            selected.length > 0 && !editing
+              ? 'chats.composer.captionPlaceholder'
+              : 'chats.composer.placeholder',
+          )
+        "
+        :aria-label="t('chats.composer.label')"
         @input="onInput"
         @keydown="onKeydown"
         @paste="onPaste"
@@ -375,8 +385,8 @@ defineExpose({ addFiles })
         type="submit"
         class="composer__send"
         :disabled="!canSend"
-        aria-label="Сохранить"
-        title="Сохранить (Enter)"
+        :aria-label="t('common.save')"
+        :title="t('chats.edit.saveHint')"
       >
         <BaseIcon name="check" />
       </button>
@@ -385,8 +395,8 @@ defineExpose({ addFiles })
         type="submit"
         class="composer__send"
         :disabled="!canSend"
-        aria-label="Отправить"
-        title="Отправить (Enter)"
+        :aria-label="t('common.send')"
+        :title="t('chats.composer.sendHint')"
       >
         <BaseIcon name="send" />
       </button>
@@ -394,8 +404,8 @@ defineExpose({ addFiles })
         v-else
         type="button"
         class="composer__send"
-        aria-label="Записать голосовое"
-        title="Записать голосовое"
+        :aria-label="t('chats.composer.record')"
+        :title="t('chats.composer.record')"
         @click="startRecording"
       >
         <BaseIcon name="mic" />
